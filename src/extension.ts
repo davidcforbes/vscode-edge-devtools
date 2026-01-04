@@ -6,7 +6,6 @@ import * as vscode from 'vscode';
 import * as debugCore from 'vscode-chrome-debug-core';
 import TelemetryReporter from '@vscode/extension-telemetry';
 import { ScreencastPanel } from './screencastPanel';
-import { BrowserViewProvider } from './browserViewProvider';
 import {
     createTelemetryReporter,
     fixRemoteWebSocket,
@@ -215,10 +214,6 @@ export function activate(context: vscode.ExtensionContext): void {
     // Register callback to update status bar when instance count changes
     ScreencastPanel.setInstanceCountChangedCallback(() => updateBrowserStatusBar());
 
-    // Register browser view provider
-    const browserViewProvider = new BrowserViewProvider();
-    vscode.window.registerTreeDataProvider('edgeBrowserActions', browserViewProvider);
-
     context.subscriptions.push(vscode.commands.registerCommand(`${SETTINGS_STORE_NAME}.attach`, (): void => {
         void attach(context);
     }));
@@ -384,6 +379,7 @@ export async function attach(
                 });
             } else {
                 // Create the list of items to show with fixed websocket addresses
+                console.warn(`[Edge Attach] Showing quick pick with ${responseArray.length} targets`);
                 const items = responseArray.map((i: IRemoteTargetJson) => {
                     i = fixRemoteWebSocket(hostname, port, i);
                     return {
@@ -395,7 +391,9 @@ export async function attach(
 
                 // Show the target list and allow the user to select one
                 const selection = await vscode.window.showQuickPick(items);
+                console.warn(`[Edge Attach] User selection: ${selection ? selection.label : 'DISMISSED'}`);
                 if (selection && selection.detail) {
+                    console.warn(`[Edge Attach] Creating screencast panel with WebSocket: ${selection.detail}`);
                     ScreencastPanel.createOrShow(context, telemetryReporter, selection.detail);
                 }
             }
