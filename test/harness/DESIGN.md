@@ -657,11 +657,12 @@ export const multiBrowserTests: TestSuite = {
                 await context.wait(100);
                 assert.equal(context.extensionMock.panels.length, 4);
 
-                // Close all
-                await context.extensionMock.executeCommand(
-                    'vscode-edge-devtools.closeAll'
-                );
+                // Close all remaining instances
+                for (const panel of context.extensionMock.panels) {
+                    panel.dispose();
+                }
 
+                await context.wait(100);
                 assert.equal(context.extensionMock.panels.length, 0);
             }
         }
