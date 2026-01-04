@@ -106,27 +106,32 @@ export class PanelSocket extends EventEmitter {
 
     private onMessage(message: { data: WebSocket.Data }) {
         if (this.isConnected) {
+            // eslint-disable-next-line @typescript-eslint/no-base-to-string
             const messageStr = message.data.toString();
 
             // Check for navigation events in CDP messages
             try {
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
                 const cdpMessage = JSON.parse(messageStr);
 
                 // Detect Page.frameNavigated event (fires when page navigates)
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
                 if (cdpMessage.method === 'Page.frameNavigated' && cdpMessage.params?.frame?.url) {
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
                     this.emit('navigation', JSON.stringify({ url: cdpMessage.params.frame.url }));
                 }
 
                 // Detect Target.targetInfoChanged event (fires when target info changes, including URL)
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
                 if (cdpMessage.method === 'Target.targetInfoChanged' && cdpMessage.params?.targetInfo?.url) {
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
                     this.emit('navigation', JSON.stringify({ url: cdpMessage.params.targetInfo.url }));
                 }
-            } catch (e) {
+            } catch {
                 // Ignore parse errors - message may not be JSON
             }
 
             // Forward the message onto the devtools
-            // eslint-disable-next-line @typescript-eslint/no-base-to-string
             this.postMessageToDevTools('message', messageStr);
         }
     }

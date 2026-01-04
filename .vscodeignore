@@ -1,18 +1,32 @@
+# Source files and configs
 **/*.ts
 **/tsconfig.json
 **/*.yml
 **/*.js.map
 *ignore
+
+# Build artifacts
 *.vsix
 package-lock.json
+
+# Development directories
+.beads/
+.serena/
+.vscode/
+.github/
+examples/
+src/
+test/
+scripts/
+
+# Output directories to exclude
+out/src/
+out/test/
+
+# Images (icon.png is copied to out/ by webpack)
 img/
+
+# Dependencies (only include what's needed)
 node_modules/
-!node_modules/vscode-webhint/dist/src/server.js
 !node_modules/@vscode/codicons/dist/codicon.css
 !node_modules/@vscode/codicons/dist/codicon.ttf
-out/edge/
-src/
-scripts/
-startpage/
-!out/startpage/
-test/

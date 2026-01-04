@@ -130,7 +130,6 @@ export class ScreencastPanel {
 
         // Send CDP command to navigate to the new URL
         this.panelSocket.sendCDPCommand('Page.navigate', { url });
-        
         // Update current URL (will be updated again when navigation event fires)
         this.currentPageUrl = url;
         this.updatePanelTitle();
@@ -195,7 +194,7 @@ export class ScreencastPanel {
                 this.currentPageUrl = navData.url;
                 this.updatePanelTitle();
             }
-        } catch (e) {
+        } catch {
             // Ignore parse errors
         }
     }
@@ -209,7 +208,7 @@ export class ScreencastPanel {
             }
             // For other URLs, just return hostname
             return urlObj.hostname;
-        } catch (e) {
+        } catch {
             // If URL parsing fails, return the URL as-is
             return url;
         }
