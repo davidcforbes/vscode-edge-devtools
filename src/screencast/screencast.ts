@@ -8,7 +8,6 @@ import { MouseEventMap, ScreencastInputHandler } from './input';
 import DimensionComponent from './dimensionComponent';
 import { getEmulatedDeviceDetails, groupEmulatedDevicesByType } from './emulatedDeviceHelpers';
 import FlyoutMenuComponent, {OffsetDirection} from './flyoutMenuComponent';
-import InfobarComponent from './infobar';
 
 import { encodeMessageForChannel } from '../common/webviewEvents';
 
@@ -61,7 +60,6 @@ export class Screencast {
         this.reloadButton.setAttribute('role', "button");
 
         const emulatedDevices = groupEmulatedDevicesByType();
-        InfobarComponent.render({message:  "This is a simulated preview with limited functionality. Deactivate 'Headless mode' in extension settings for a full experience."}, 'infobar');
         FlyoutMenuComponent.render({
             iconName: 'codicon-chevron-down',
             title: 'Emulate devices',

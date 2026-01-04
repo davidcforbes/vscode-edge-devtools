@@ -1,4 +1,4 @@
-/* eslint-disable linebreak-style */
+
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
@@ -270,8 +270,8 @@ export function getRemoteEndpointSettings(config: Partial<IUserConfig> = {}): ID
     }
 
     if (userDataDir === true || (typeof userDataDir === 'undefined' && browserPathSet === 'Default')) {
-        // Generate a temp directory
-        userDataDir = path.join(os.tmpdir(), `vscode-edge-devtools-userdatadir_${port}`);
+        // Generate a unique temp directory for each browser instance
+        userDataDir = path.join(os.tmpdir(), `vscode-edge-devtools-userdatadir_${port}_${Date.now()}`);
         if (!fse.pathExistsSync(userDataDir)) {
             fse.mkdirSync(userDataDir);
         }
@@ -359,6 +359,8 @@ export function getPlatform(): Platform {
 export async function getBrowserPath(config: Partial<IUserConfig> = {}): Promise<string> {
     const settings = vscode.workspace.getConfiguration(SETTINGS_STORE_NAME);
     const flavor: BrowserFlavor | undefined = config.browserFlavor || settings.get('browserFlavor');
+
+    console.warn(`[Edge Detection] getBrowserPath called - Config flavor: ${config.browserFlavor}, Settings flavor: ${settings.get('browserFlavor')}, Final flavor: ${flavor}`);
 
     switch (getPlatform()) {
         case 'Windows': {
@@ -485,12 +487,16 @@ export function getBrowserArgs(): string[] {
  * @returns a promise with the path to the browser or an empty string if not found.
  */
 async function verifyFlavorPath(flavor: BrowserFlavor | undefined, platform: Platform): Promise<string> {
+    console.warn(`[Edge Detection] Starting browser detection - Flavor: ${flavor || 'Default'}, Platform: ${platform}`);
+
     let item = msEdgeBrowserMapping.get(flavor || 'Default');
     if (!item) {
+        console.warn('[Edge Detection] No item found for flavor, searching all flavors...');
         // if no flavor is specified search for any path present.
         for (item of msEdgeBrowserMapping.values()) {
             const result = await findFlavorPath(item);
             if (result) {
+                console.warn(`[Edge Detection] Found browser at: ${result}`);
                 return result;
             }
         }
@@ -501,23 +507,41 @@ async function verifyFlavorPath(flavor: BrowserFlavor | undefined, platform: Pla
     // Verifies if the path exists in disk.
     async function findFlavorPath(browserPath: IBrowserPath | undefined) {
         if (!browserPath) {
+            console.warn('[Edge Detection] No browserPath provided');
             return '';
         }
 
-        if (await fse.pathExists(browserPath.windows.primary) &&
-            (platform === 'Windows' || flavor === 'Default')) {
-            return browserPath.windows.primary;
-        } if (await fse.pathExists(browserPath.windows.secondary) &&
-            (platform === 'Windows' || flavor === 'Default')) {
-            return browserPath.windows.secondary;
-        } if (await fse.pathExists(browserPath.osx) &&
-            (platform === 'OSX' || flavor === 'Default')) {
-            return browserPath.osx;
-        }  if (await fse.pathExists(browserPath.debianLinux) &&
-            (platform === 'Linux' || flavor === 'Default')) {
-            return browserPath.debianLinux;
-    }
+        console.warn(`[Edge Detection] Checking primary Windows path: ${browserPath.windows.primary}`);
+        const primaryExists = await fse.pathExists(browserPath.windows.primary);
+        console.warn(`[Edge Detection] Primary path exists: ${primaryExists}, Platform check: ${platform === 'Windows' || flavor === 'Default'}`);
 
+        if (primaryExists && (platform === 'Windows' || flavor === 'Default')) {
+            console.warn(`[Edge Detection] SUCCESS - Using primary path: ${browserPath.windows.primary}`);
+            return browserPath.windows.primary;
+        }
+
+        console.warn(`[Edge Detection] Checking secondary Windows path: ${browserPath.windows.secondary}`);
+        const secondaryExists = await fse.pathExists(browserPath.windows.secondary);
+        console.warn(`[Edge Detection] Secondary path exists: ${secondaryExists}`);
+
+        if (secondaryExists && (platform === 'Windows' || flavor === 'Default')) {
+            console.warn(`[Edge Detection] SUCCESS - Using secondary path: ${browserPath.windows.secondary}`);
+            return browserPath.windows.secondary;
+        }
+
+        if (await fse.pathExists(browserPath.osx) &&
+            (platform === 'OSX' || flavor === 'Default')) {
+            console.warn(`[Edge Detection] SUCCESS - Using OSX path: ${browserPath.osx}`);
+            return browserPath.osx;
+        }
+
+        if (await fse.pathExists(browserPath.debianLinux) &&
+            (platform === 'Linux' || flavor === 'Default')) {
+            console.warn(`[Edge Detection] SUCCESS - Using Linux path: ${browserPath.debianLinux}`);
+            return browserPath.debianLinux;
+        }
+
+        console.warn('[Edge Detection] FAILED - No valid browser path found');
         return '';
     }
 }
@@ -625,6 +649,9 @@ export async function reportFileExtensionTypes(telemetryReporter: Readonly<Telem
 }
 
 (function initialize() {
+    console.warn('[Edge Detection] Initializing browser paths...');
+    console.warn(`[Edge Detection] WIN_APP_DATA: ${WIN_APP_DATA}`);
+    console.warn(`[Edge Detection] process.env.LOCALAPPDATA: ${process.env.LOCALAPPDATA}`);
     // insertion order matters.
     msEdgeBrowserMapping.set('Stable', {
         debianLinux: '/opt/microsoft/msedge/msedge',
@@ -658,4 +685,7 @@ export async function reportFileExtensionTypes(telemetryReporter: Readonly<Telem
             secondary: path.join(WIN_APP_DATA, 'Microsoft\\Edge SxS\\Application\\msedge.exe'),
         },
     });
+
+    console.warn('[Edge Detection] Browser mapping initialized with flavors:', Array.from(msEdgeBrowserMapping.keys()));
+    console.warn('[Edge Detection] Stable primary path:', msEdgeBrowserMapping.get('Stable')?.windows.primary);
 })();
