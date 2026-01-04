@@ -5,8 +5,6 @@ import { Browser, Target, TargetType } from 'puppeteer-core';
 import * as vscode from 'vscode';
 import * as debugCore from 'vscode-chrome-debug-core';
 import TelemetryReporter from '@vscode/extension-telemetry';
-import { CDPTarget } from './cdpTarget';
-import { CDPTargetsProvider } from './cdpTargetsProvider';
 import { ScreencastPanel } from './screencastPanel';
 import {
     buttonCode,
@@ -38,7 +36,6 @@ import { ErrorCodes } from './common/errorCodes';
 
 let telemetryReporter: Readonly<TelemetryReporter>;
 let browserInstance: Browser;
-let cdpTargetsProvider: CDPTargetsProvider;
 
 export function activate(context: vscode.ExtensionContext): void {
     if (!telemetryReporter) {
@@ -57,11 +54,7 @@ export function activate(context: vscode.ExtensionContext): void {
         void attachToCurrentDebugTarget(context, debugSessionId, config);
     }));
 
-    // Register the side-panel view and its commands
-    cdpTargetsProvider = new CDPTargetsProvider(context, telemetryReporter);
-    context.subscriptions.push(vscode.window.registerTreeDataProvider(
-        `${SETTINGS_VIEW_NAME}.targets`,
-        cdpTargetsProvider));
+    // Register commands
     context.subscriptions.push(vscode.commands.registerCommand(
         `${SETTINGS_VIEW_NAME}.launch`,
         async (fromEmptyTargetView?: boolean) => {
@@ -71,42 +64,10 @@ export function activate(context: vscode.ExtensionContext): void {
                 telemetryReporter.sendTelemetryEvent('user/buttonPress', { 'VSCode.buttonCode': buttonCode.launchBrowserInstance });
             }
             await launch(context);
-            cdpTargetsProvider.refresh();
         }));
-    context.subscriptions.push(vscode.commands.registerCommand(
-        `${SETTINGS_VIEW_NAME}.refresh`,
-        () => {
-            telemetryReporter.sendTelemetryEvent('user/buttonPress', { 'VSCode.buttonCode': buttonCode.refreshTargetList });
-            cdpTargetsProvider.refresh();
-        }));
-    context.subscriptions.push(vscode.commands.registerCommand(
-        `${SETTINGS_VIEW_NAME}.attach`,
-        (target?: CDPTarget, isJsDebugProxiedCDPConnection = false) => {
-            if (!target){
-                telemetryReporter.sendTelemetryEvent('command/attach/noTarget');
-                return;
-            }
-            telemetryReporter.sendTelemetryEvent('user/buttonPress', { 'VSCode.buttonCode': buttonCode.attachToTarget });
-            telemetryReporter.sendTelemetryEvent('view/devtools');
-            const runtimeConfig = getRuntimeConfig();
-            if (isJsDebugProxiedCDPConnection) {
-                runtimeConfig.isJsDebugProxiedCDPConnection = true;
-            }
-            ScreencastPanel.createOrShow(context, telemetryReporter, target.websocketUrl, runtimeConfig.isJsDebugProxiedCDPConnection);
-        }));
+    // Note: attach command moved to main attach() function below which shows quick pick
 
-    context.subscriptions.push(vscode.commands.registerCommand(
-        `${SETTINGS_VIEW_NAME}.toggleScreencast`,
-        (target?: CDPTarget, isJsDebugProxiedCDPConnection: boolean = false) => {
-            if (!target){
-                const errorMessage = 'No target selected';
-                telemetryReporter.sendTelemetryErrorEvent('command/screencast/target', {message: errorMessage});
-                return;
-            }
-            telemetryReporter.sendTelemetryEvent('user/buttonPress', { 'VSCode.buttonCode': buttonCode.toggleScreencast });
-            telemetryReporter.sendTelemetryEvent('view/screencast');
-            ScreencastPanel.createOrShow(context,  telemetryReporter, target.websocketUrl, isJsDebugProxiedCDPConnection);
-        }));
+    // Note: toggleScreencast command removed - use attach command instead
 
     context.subscriptions.push(vscode.commands.registerCommand(
         `${SETTINGS_VIEW_NAME}.toggleInspect`,
@@ -124,48 +85,7 @@ export function activate(context: vscode.ExtensionContext): void {
         telemetryReporter.sendTelemetryEvent('user/buttonPress', { 'VSCode.buttonCode': buttonCode.viewChangelog });
         void vscode.env.openExternal(vscode.Uri.parse('https://github.com/microsoft/vscode-edge-devtools/blob/main/CHANGELOG.md'));
     }));
-    context.subscriptions.push(vscode.commands.registerCommand(
-        `${SETTINGS_VIEW_NAME}.close-instance`,
-        async (target?: CDPTarget) => {
-            if (!target) {
-                telemetryReporter.sendTelemetryEvent('command/close/noTarget');
-                return;
-            }
-            telemetryReporter.sendTelemetryEvent('user/buttonPress', { 'VSCode.buttonCode': buttonCode.closeTarget });
-            // disable buttons for this target
-            target.contextValue = 'cdpTargetClosing';
-            cdpTargetsProvider.changeDataEvent.fire(target);
-
-            // update with the latest information, in case user has navigated to a different page via browser.
-            cdpTargetsProvider.refresh();
-            const normalizedPath = new URL(target.description).toString();
-            if (browserInstance) {
-                const browserPages = await browserInstance.pages();
-
-                // First we validate we have pages to close, some non-visual targets could keep the browser
-                // instance alive.
-                if (!browserPages || browserPages.length === 0){
-                    void browserInstance.close();
-                    return;
-                }
-
-                for (const page of browserPages) {
-                    // URL needs to be accessed through the target as the page could be handling errors in a different way.
-                    // e.g redirecting to chrome-error: protocol
-                    if (!page.isClosed() && (normalizedPath === page.target().url())) {
-                        // fire and forget
-                        void page.close();
-                        break;
-                    }
-                }
-
-                // display the latest information to user.
-                cdpTargetsProvider.refresh();
-            }
-        }));
-    context.subscriptions.push(vscode.commands.registerCommand(
-        `${SETTINGS_VIEW_NAME}.copyItem`,
-        (target: CDPTarget) => vscode.env.clipboard.writeText(target.tooltip)));
+    // Note: close-instance and copyItem commands removed with tree view
     context.subscriptions.push(vscode.commands.registerCommand(`${SETTINGS_VIEW_NAME}.viewDocumentation`, () => {
             telemetryReporter.sendTelemetryEvent('user/buttonPress', { 'VSCode.buttonCode': buttonCode.viewDocumentation });
             void vscode.env.openExternal(vscode.Uri.parse('https://learn.microsoft.com/microsoft-edge/visual-studio-code/microsoft-edge-devtools-extension'));
@@ -415,12 +335,6 @@ export async function launch(context: vscode.ExtensionContext, launchUrl?: strin
         if (url !== SETTINGS_DEFAULT_URL) {
             reportUrlType(url, telemetryReporter);
         }
-        browserInstance.on('targetcreated', () => {
-            cdpTargetsProvider.refresh();
-        });
-        browserInstance.on('targetdestroyed', () => {
-            cdpTargetsProvider.refresh();
-        });
         browserInstance.on('targetchanged',  (target: Target) => {
             if (target.type() === TargetType.PAGE) {
                 reportUrlType(target.url(), telemetryReporter);

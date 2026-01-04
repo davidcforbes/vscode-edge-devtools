@@ -120,11 +120,6 @@
                 }
             },
             {
-                "command": "vscode-edge-devtools-view.copyItem",
-                "category": "Microsoft Edge Tools",
-                "title": "Copy Value"
-            },
-            {
                 "command": "vscode-edge-devtools-view.openSettings",
                 "category": "Microsoft Edge Tools",
                 "title": "Open Settings"
@@ -301,54 +296,8 @@
                     "when": "view == vscode-edge-devtools-view.targets"
                 }
             ],
-            "view/title": [
-                {
-                    "command": "vscode-edge-devtools-view.launch",
-                    "when": "view == vscode-edge-devtools-view.targets",
-                    "group": "navigation"
-                },
-                {
-                    "command": "vscode-edge-devtools-view.refresh",
-                    "when": "view == vscode-edge-devtools-view.targets",
-                    "group": "navigation"
-                },
-                {
-                    "command": "vscode-edge-devtools-view.openSettings",
-                    "when": "view == vscode-edge-devtools-view.targets",
-                    "group": "2_vscode-edge-devtools"
-                },
-                {
-                    "command": "vscode-edge-devtools-view.viewChangelog",
-                    "when": "view == vscode-edge-devtools-view.targets",
-                    "group": "2_vscode-edge-devtools"
-                }
-            ],
-            "view/item/context": [
-                {
-                    "command": "vscode-edge-devtools-view.toggleScreencast",
-                    "when": "view == vscode-edge-devtools-view.targets && viewItem == cdpTarget",
-                    "group": "inline@0"
-                },
-                {
-                    "command": "vscode-edge-devtools-view.attach",
-                    "when": "view == vscode-edge-devtools-view.targets && viewItem == cdpTarget || viewItem == cdpTargetClosing",
-                    "group": "inline@1"
-                },
-                {
-                    "command": "vscode-edge-devtools-view.close-instance",
-                    "when": "view == vscode-edge-devtools-view.targets && viewItem == cdpTarget || viewItem == cdpTargetClosing",
-                    "group": "inline@2"
-                },
-                {
-                    "command": "vscode-edge-devtools-view.attach",
-                    "when": "view == vscode-edge-devtools-view.targets && viewItem == cdpTarget"
-                },
-                {
-                    "command": "vscode-edge-devtools-view.copyItem",
-                    "when": "view == vscode-edge-devtools-view.targets && viewItem == cdpTargetProperty",
-                    "group": "2_contextMenu"
-                }
-            ],
+            "view/title": [],
+            "view/item/context": [],
             "explorer/context": [
                 {
                     "when": "resourceLangId == html",
@@ -384,10 +333,6 @@
         },
         "views": {
             "vscode-edge-devtools-view": [
-                {
-                    "id": "vscode-edge-devtools-view.targets",
-                    "name": "Targets"
-                },
                 {
                     "id": "vscode-edge-devtools-view.help-links",
                     "name": "Helpful links"
