@@ -6,6 +6,7 @@ import * as vscode from 'vscode';
 import * as debugCore from 'vscode-chrome-debug-core';
 import TelemetryReporter from '@vscode/extension-telemetry';
 import { ScreencastPanel } from './screencastPanel';
+import { BrowserViewProvider } from './browserViewProvider';
 import {
     createTelemetryReporter,
     fixRemoteWebSocket,
@@ -214,6 +215,10 @@ export function activate(context: vscode.ExtensionContext): void {
     // Register callback to update status bar when instance count changes
     ScreencastPanel.setInstanceCountChangedCallback(() => updateBrowserStatusBar());
 
+    // Register browser view provider
+    const browserViewProvider = new BrowserViewProvider();
+    vscode.window.registerTreeDataProvider('edgeBrowserActions', browserViewProvider);
+
     context.subscriptions.push(vscode.commands.registerCommand(`${SETTINGS_STORE_NAME}.attach`, (): void => {
         void attach(context);
     }));
@@ -260,6 +265,14 @@ export function activate(context: vscode.ExtensionContext): void {
 }
 
 export async function launchHtml(context: vscode.ExtensionContext, fileUri: vscode.Uri): Promise<void> {
+    // Validate that fileUri is provided
+    if (!fileUri) {
+        void vscode.window.showErrorMessage(
+            'Please use this command from the context menu by right-clicking on an HTML file in the Explorer, or use "Microsoft Edge Tools: Launch Edge and then attach to a target" to open a browser with a URL.'
+        );
+        return;
+    }
+
     const url = !vscode.env.remoteName
         ? `file://${fileUri.fsPath}`
         : `file://${vscode.env.remoteName}.localhost/${fileUri.authority.split('+')[1]}/${fileUri.fsPath.replace(/\\/g, '/')}`;
@@ -285,6 +298,14 @@ export async function launchHtml(context: vscode.ExtensionContext, fileUri: vsco
 }
 
 export async function launchScreencast(context: vscode.ExtensionContext, fileUri: vscode.Uri): Promise<void> {
+    // Validate that fileUri is provided
+    if (!fileUri) {
+        void vscode.window.showErrorMessage(
+            'Please use this command from the context menu by right-clicking on an HTML file in the Explorer, or use "Microsoft Edge Tools: Launch Edge and then attach to a target" to open a browser with a URL.'
+        );
+        return;
+    }
+
     const url = !vscode.env.remoteName
         ? `file://${fileUri.fsPath}`
         : `file://${vscode.env.remoteName}.localhost/${fileUri.authority.split('+')[1]}/${fileUri.fsPath.replace(/\\/g, '/')}`;

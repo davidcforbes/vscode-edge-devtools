@@ -47,6 +47,23 @@
         "virtualWorkspaces": false
     },
     "contributes": {
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "edgeBrowserView",
+                    "title": "Edge Browser",
+                    "icon": "$(browser)"
+                }
+            ]
+        },
+        "views": {
+            "edgeBrowserView": [
+                {
+                    "id": "edgeBrowserActions",
+                    "name": "Browser Actions"
+                }
+            ]
+        },
         "commands": [
             {
                 "command": "vscode-edge-devtools.attach",
