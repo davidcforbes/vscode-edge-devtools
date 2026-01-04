@@ -100,6 +100,18 @@ export class ScreencastPanel {
         this.panelSocket.dispose();
     }
 
+    static getAllInstances(): Map<string, ScreencastPanel> {
+        return ScreencastPanel.instances;
+    }
+
+    reveal(): void {
+        this.panel.reveal(vscode.ViewColumn.Beside);
+    }
+
+    getTitle(): string {
+        return this.panel.title;
+    }
+
     private toggleDevTools() {
         // DevTools functionality has been removed - this is now a no-op
     }

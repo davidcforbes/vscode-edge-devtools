@@ -31,6 +31,106 @@ import { ErrorCodes } from './common/errorCodes';
 let telemetryReporter: Readonly<TelemetryReporter>;
 const browserInstances = new Map<string, Browser>();
 
+async function newBrowserWindow(context: vscode.ExtensionContext): Promise<void> {
+    const url = await vscode.window.showInputBox({
+        prompt: 'Enter URL to open',
+        value: 'about:blank',
+        placeHolder: 'https://example.com'
+    });
+    
+    if (url) {
+        await launch(context, url);
+    }
+}
+
+async function listOpenBrowsers(context: vscode.ExtensionContext): Promise<void> {
+    const instances = ScreencastPanel.getAllInstances();
+    
+    if (instances.size === 0) {
+        void vscode.window.showInformationMessage('No browser instances are currently open.');
+        return;
+    }
+    
+    const items = Array.from(instances.entries()).map(([id, panel]) => ({
+        label: panel.getTitle(),
+        description: id,
+        detail: `Panel ID: ${id}`,
+        panelId: id
+    }));
+    
+    const selection = await vscode.window.showQuickPick(items, {
+        placeHolder: 'Select a browser instance to view details'
+    });
+    
+    if (selection) {
+        const panel = instances.get(selection.panelId);
+        if (panel) {
+            panel.reveal();
+        }
+    }
+}
+
+async function switchToBrowser(context: vscode.ExtensionContext): Promise<void> {
+    const instances = ScreencastPanel.getAllInstances();
+    
+    if (instances.size === 0) {
+        void vscode.window.showInformationMessage('No browser instances are currently open.');
+        return;
+    }
+    
+    const items = Array.from(instances.entries()).map(([id, panel]) => ({
+        label: panel.getTitle(),
+        description: id,
+        panelId: id
+    }));
+    
+    const selection = await vscode.window.showQuickPick(items, {
+        placeHolder: 'Switch to browser instance'
+    });
+    
+    if (selection) {
+        const panel = instances.get(selection.panelId);
+        if (panel) {
+            panel.reveal();
+        }
+    }
+}
+
+async function closeCurrentBrowser(): Promise<void> {
+    // Get the active webview panel
+    const instances = ScreencastPanel.getAllInstances();
+    
+    if (instances.size === 0) {
+        void vscode.window.showInformationMessage('No browser instances are currently open.');
+        return;
+    }
+    
+    if (instances.size === 1) {
+        // Only one instance, close it
+        const panel = Array.from(instances.values())[0];
+        panel.dispose();
+        return;
+    }
+    
+    // Multiple instances - let user select which to close
+    const items = Array.from(instances.entries()).map(([id, panel]) => ({
+        label: panel.getTitle(),
+        description: id,
+        panelId: id
+    }));
+    
+    const selection = await vscode.window.showQuickPick(items, {
+        placeHolder: 'Select browser instance to close'
+    });
+    
+    if (selection) {
+        const panel = instances.get(selection.panelId);
+        if (panel) {
+            panel.dispose();
+        }
+    }
+}
+
 export function activate(context: vscode.ExtensionContext): void {
     if (!telemetryReporter) {
         telemetryReporter = createTelemetryReporter(context);
@@ -53,6 +153,22 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(vscode.commands.registerCommand(`${SETTINGS_VIEW_NAME}.launchScreencast`, async (fileUri: vscode.Uri): Promise<void> => {
         telemetryReporter.sendTelemetryEvent('contextMenu/launchScreencast');
         await launchScreencast(context, fileUri);
+    }));
+
+    context.subscriptions.push(vscode.commands.registerCommand(`${SETTINGS_STORE_NAME}.newBrowserWindow`, (): void => {
+        void newBrowserWindow(context);
+    }));
+
+    context.subscriptions.push(vscode.commands.registerCommand(`${SETTINGS_STORE_NAME}.listOpenBrowsers`, (): void => {
+        void listOpenBrowsers(context);
+    }));
+
+    context.subscriptions.push(vscode.commands.registerCommand(`${SETTINGS_STORE_NAME}.switchToBrowser`, (): void => {
+        void switchToBrowser(context);
+    }));
+
+    context.subscriptions.push(vscode.commands.registerCommand(`${SETTINGS_STORE_NAME}.closeCurrentBrowser`, (): void => {
+        void closeCurrentBrowser();
     }));
 
     void vscode.commands.executeCommand('setContext', 'titleCommandsRegistered', true);

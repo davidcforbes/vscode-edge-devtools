@@ -72,6 +72,26 @@
                 "command": "vscode-edge-devtools-view.launchScreencast",
                 "title": "Open Browser",
                 "category": "Microsoft Edge Tools"
+            },
+            {
+                "command": "vscode-edge-devtools.newBrowserWindow",
+                "title": "New Browser Window",
+                "category": "Microsoft Edge Tools"
+            },
+            {
+                "command": "vscode-edge-devtools.listOpenBrowsers",
+                "title": "List Open Browsers",
+                "category": "Microsoft Edge Tools"
+            },
+            {
+                "command": "vscode-edge-devtools.switchToBrowser",
+                "title": "Switch to Browser",
+                "category": "Microsoft Edge Tools"
+            },
+            {
+                "command": "vscode-edge-devtools.closeCurrentBrowser",
+                "title": "Close Current Browser",
+                "category": "Microsoft Edge Tools"
             }
         ],
         "configuration": {
