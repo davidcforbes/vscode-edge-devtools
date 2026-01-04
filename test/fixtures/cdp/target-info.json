@@ -1,0 +1,14 @@
+{
+  "id": 2,
+  "result": {
+    "targetInfo": {
+      "targetId": "test-target-01",
+      "type": "page",
+      "title": "Test Page",
+      "url": "http://localhost:8080",
+      "attached": true,
+      "canAccessOpener": false,
+      "browserContextId": "browser-context-01"
+    }
+  }
+}

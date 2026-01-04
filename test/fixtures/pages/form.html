@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Form Test Page</title>
+</head>
+<body>
+    <h1>Form Test</h1>
+    <form id="testForm">
+        <div>
+            <label for="username">Username:</label>
+            <input type="text" id="username" name="username" required>
+        </div>
+        <div>
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email" required>
+        </div>
+        <div>
+            <label for="age">Age:</label>
+            <input type="number" id="age" name="age" min="0" max="120">
+        </div>
+        <div>
+            <label>
+                <input type="checkbox" id="subscribe" name="subscribe">
+                Subscribe to newsletter
+            </label>
+        </div>
+        <button type="submit">Submit</button>
+    </form>
+    <div id="result" style="margin-top: 20px; display: none;">
+        <h2>Form Submitted</h2>
+        <pre id="formData"></pre>
+    </div>
+    <script>
+        console.log('Form page loaded');
+        document.getElementById('testForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+            document.getElementById('formData').textContent = JSON.stringify(data, null, 2);
+            document.getElementById('result').style.display = 'block';
+            console.log('Form submitted:', data);
+        });
+    </script>
+</body>
+</html>

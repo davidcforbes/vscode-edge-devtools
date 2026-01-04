@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Navigation Test Page</title>
+</head>
+<body>
+    <h1>Navigation Test</h1>
+    <nav>
+        <a href="simple.html">Go to Simple Page</a>
+        <a href="form.html">Go to Form Page</a>
+    </nav>
+    <p id="pageInfo">Page loaded at: <span id="timestamp"></span></p>
+    <script>
+        document.getElementById('timestamp').textContent = new Date().toISOString();
+        console.log('Navigation page loaded');
+    </script>
+</body>
+</html>

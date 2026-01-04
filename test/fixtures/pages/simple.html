@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+        }
+        h1 {
+            color: #333;
+        }
+        #content {
+            padding: 20px;
+            background: #f0f0f0;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Page</h1>
+    <p id="content">This is a test page for the VS Code Edge DevTools extension.</p>
+    <button id="testButton">Click Me</button>
+    <script>
+        console.log('Test page loaded');
+        document.getElementById('testButton').addEventListener('click', () => {
+            console.log('Button clicked!');
+            document.getElementById('content').textContent = 'Button was clicked!';
+        });
+    </script>
+</body>
+</html>

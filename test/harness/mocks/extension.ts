@@ -1,0 +1,239 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
+
+import { EventEmitter } from 'events';
+import * as vscode from 'vscode';
+
+export interface TelemetryEvent {
+    name: string;
+    properties?: Record<string, string>;
+    measures?: Record<string, number>;
+}
+
+export class WebviewPanelMock extends EventEmitter {
+    public visible = true;
+    public active = true;
+    public messages: unknown[] = [];
+    private _disposed = false;
+
+    constructor(
+        public viewType: string,
+        public title: string,
+        public options: vscode.WebviewPanelOptions & vscode.WebviewOptions
+    ) {
+        super();
+    }
+
+    get webview(): vscode.Webview {
+        return {
+            options: this.options,
+            html: '',
+            postMessage: (message: unknown) => {
+                this.messages.push(message);
+                this.emit('message', message);
+                return Promise.resolve(true);
+            },
+            onDidReceiveMessage: (handler: (message: unknown) => void) => {
+                this.on('receive', handler);
+                return { dispose: () => this.off('receive', handler) };
+            },
+            asWebviewUri: (uri: vscode.Uri) => uri,
+            cspSource: 'https://example.com',
+        } as unknown as vscode.Webview;
+    }
+
+    get onDidDispose(): vscode.Event<void> {
+        return (listener) => {
+            this.on('dispose', listener);
+            return { dispose: () => this.off('dispose', listener) };
+        };
+    }
+
+    get onDidChangeViewState(): vscode.Event<vscode.WebviewPanelOnDidChangeViewStateEvent> {
+        return (listener) => {
+            this.on('viewStateChange', listener);
+            return { dispose: () => this.off('viewStateChange', listener) };
+        };
+    }
+
+    reveal(viewColumn?: vscode.ViewColumn, preserveFocus?: boolean): void {
+        this.visible = true;
+        this.active = !preserveFocus;
+        this.emit('viewStateChange', {
+            webviewPanel: this,
+        });
+    }
+
+    dispose(): void {
+        if (!this._disposed) {
+            this._disposed = true;
+            this.emit('dispose');
+        }
+    }
+
+    get iconPath(): vscode.Uri | { light: vscode.Uri; dark: vscode.Uri } | undefined {
+        return undefined;
+    }
+
+    set iconPath(_value: vscode.Uri | { light: vscode.Uri; dark: vscode.Uri } | undefined) {
+        // No-op
+    }
+}
+
+export class ExtensionMock extends EventEmitter {
+    public commands: Map<string, (...args: unknown[]) => unknown> = new Map();
+    public panels: WebviewPanelMock[] = [];
+    public telemetryEvents: TelemetryEvent[] = [];
+    public disposables: vscode.Disposable[] = [];
+
+    async activate(): Promise<void> {
+        // Mock activation - sets up global vscode mock
+        (global as any).vscode = this.createVSCodeMock();
+    }
+
+    async deactivate(): Promise<void> {
+        // Dispose all registered resources
+        for (const disposable of this.disposables) {
+            disposable.dispose();
+        }
+        this.disposables = [];
+        this.commands.clear();
+        this.panels = [];
+    }
+
+    async executeCommand(id: string, ...args: unknown[]): Promise<unknown> {
+        const handler = this.commands.get(id);
+        if (!handler) {
+            throw new Error(`Command not found: ${id}`);
+        }
+        return await handler(...args);
+    }
+
+    private createVSCodeMock(): typeof vscode {
+        const mock = {
+            commands: {
+                registerCommand: (id: string, handler: (...args: unknown[]) => unknown) => {
+                    this.commands.set(id, handler);
+                    const disposable = { dispose: () => this.commands.delete(id) };
+                    this.disposables.push(disposable);
+                    return disposable;
+                },
+                executeCommand: async (id: string, ...args: unknown[]) => {
+                    return await this.executeCommand(id, ...args);
+                },
+            },
+            window: {
+                createWebviewPanel: (
+                    viewType: string,
+                    title: string,
+                    showOptions: vscode.ViewColumn | { viewColumn: vscode.ViewColumn; preserveFocus?: boolean },
+                    options?: vscode.WebviewPanelOptions & vscode.WebviewOptions
+                ) => {
+                    const panel = new WebviewPanelMock(viewType, title, options || {});
+                    this.panels.push(panel);
+                    panel.on('dispose', () => {
+                        const index = this.panels.indexOf(panel);
+                        if (index > -1) {
+                            this.panels.splice(index, 1);
+                        }
+                    });
+                    return panel;
+                },
+                showQuickPick: async <T extends vscode.QuickPickItem>(
+                    items: readonly T[] | Thenable<readonly T[]>
+                ): Promise<T | undefined> => {
+                    const resolvedItems = await Promise.resolve(items);
+                    return resolvedItems[0];
+                },
+                showInputBox: async (options?: vscode.InputBoxOptions): Promise<string | undefined> => {
+                    return options?.value || '';
+                },
+                showErrorMessage: (message: string) => {
+                    this.emit('error', message);
+                    return Promise.resolve(undefined);
+                },
+                showInformationMessage: (message: string) => {
+                    this.emit('info', message);
+                    return Promise.resolve(undefined);
+                },
+            },
+            workspace: {
+                getConfiguration: (section?: string) => ({
+                    get: <T>(key: string, defaultValue?: T): T | undefined => defaultValue,
+                    has: (_key: string) => false,
+                    inspect: (_key: string) => undefined,
+                    update: () => Promise.resolve(),
+                }),
+                onDidChangeConfiguration: (handler: (e: vscode.ConfigurationChangeEvent) => unknown) => {
+                    this.on('configChange', handler);
+                    const disposable = { dispose: () => this.off('configChange', handler) };
+                    this.disposables.push(disposable);
+                    return disposable;
+                },
+            },
+            ViewColumn: {
+                Active: -1,
+                Beside: -2,
+                One: 1,
+                Two: 2,
+                Three: 3,
+                Four: 4,
+                Five: 5,
+                Six: 6,
+                Seven: 7,
+                Eight: 8,
+                Nine: 9,
+            },
+            Uri: {
+                file: (path: string) => ({ scheme: 'file', path, fsPath: path } as vscode.Uri),
+                parse: (value: string) => ({ scheme: 'https', path: value } as vscode.Uri),
+                joinPath: (uri: vscode.Uri, ...paths: string[]) => ({
+                    ...uri,
+                    path: [uri.path, ...paths].join('/'),
+                } as vscode.Uri),
+            },
+            env: {
+                clipboard: {
+                    writeText: (text: string) => {
+                        this.emit('clipboardWrite', text);
+                        return Promise.resolve();
+                    },
+                    readText: () => Promise.resolve(''),
+                },
+            },
+        };
+
+        return mock as unknown as typeof vscode;
+    }
+
+    createExtensionContext(): vscode.ExtensionContext {
+        return {
+            subscriptions: this.disposables,
+            extensionPath: __dirname,
+            extensionUri: { scheme: 'file', path: __dirname } as vscode.Uri,
+            globalState: {
+                get: <T>(_key: string, defaultValue?: T) => defaultValue,
+                update: () => Promise.resolve(),
+                setKeysForSync: () => {},
+                keys: () => [],
+            },
+            workspaceState: {
+                get: <T>(_key: string, defaultValue?: T) => defaultValue,
+                update: () => Promise.resolve(),
+                keys: () => [],
+            },
+            asAbsolutePath: (relativePath: string) => relativePath,
+            storagePath: undefined,
+            globalStoragePath: __dirname,
+            logPath: __dirname,
+            extensionMode: 3, // ExtensionMode.Production
+            environmentVariableCollection: {} as any,
+            extension: {} as any,
+            secrets: {} as any,
+            storageUri: undefined,
+            globalStorageUri: { scheme: 'file', path: __dirname } as vscode.Uri,
+            logUri: { scheme: 'file', path: __dirname } as vscode.Uri,
+            languageModelAccessInformation: {} as any,
+        } as vscode.ExtensionContext;
+    }
+}

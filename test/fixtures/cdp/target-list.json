@@ -1,0 +1,22 @@
+[
+  {
+    "id": "target-page-01",
+    "type": "page",
+    "title": "Test Page",
+    "url": "http://localhost:8080",
+    "description": "",
+    "devtoolsFrontendUrl": "/devtools/inspector.html?ws=localhost:9222/devtools/page/target-page-01",
+    "webSocketDebuggerUrl": "ws://localhost:9222/devtools/page/target-page-01",
+    "faviconUrl": ""
+  },
+  {
+    "id": "target-page-02",
+    "type": "page",
+    "title": "Another Test Page",
+    "url": "http://localhost:8080/navigation.html",
+    "description": "",
+    "devtoolsFrontendUrl": "/devtools/inspector.html?ws=localhost:9222/devtools/page/target-page-02",
+    "webSocketDebuggerUrl": "ws://localhost:9222/devtools/page/target-page-02",
+    "faviconUrl": ""
+  }
+]
