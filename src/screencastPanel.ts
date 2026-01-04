@@ -123,6 +123,19 @@ export class ScreencastPanel {
         this.panel.reveal(vscode.ViewColumn.Beside);
     }
 
+    navigateToUrl(url: string): void {
+        if (!url) {
+            return;
+        }
+
+        // Send CDP command to navigate to the new URL
+        this.panelSocket.sendCDPCommand('Page.navigate', { url });
+        
+        // Update current URL (will be updated again when navigation event fires)
+        this.currentPageUrl = url;
+        this.updatePanelTitle();
+    }
+
     getTitle(): string {
         return this.panel.title;
     }

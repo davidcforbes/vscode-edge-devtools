@@ -28,6 +28,20 @@ export class PanelSocket extends EventEmitter {
         parseMessageFromChannel(message, (eventName, args) => this.onMessageParsed(eventName, args));
     }
 
+    sendCDPCommand(method: string, params?: unknown): void {
+        if (!this.socket || !this.isConnected) {
+            return;
+        }
+
+        const command = {
+            id: Date.now(),
+            method,
+            params: params || {}
+        };
+
+        this.socket.send(JSON.stringify(command));
+    }
+
     dispose(): void {
         if (this.socket) {
             this.isConnected = false;

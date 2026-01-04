@@ -97,6 +97,62 @@ async function switchToBrowser(_context: vscode.ExtensionContext): Promise<void>
     }
 }
 
+async function navigateBrowser(_context: vscode.ExtensionContext): Promise<void> {
+    const instances = ScreencastPanel.getAllInstances();
+
+    if (instances.size === 0) {
+        void vscode.window.showInformationMessage('No browser instances are currently open.');
+        return;
+    }
+
+    // If there's only one instance, use it directly
+    let targetPanel: ScreencastPanel | undefined;
+
+    if (instances.size === 1) {
+        targetPanel = Array.from(instances.values())[0];
+    } else {
+        // Multiple instances - let user select which to navigate
+        const items = Array.from(instances.entries()).map(([id, panel]) => ({
+            label: panel.getTitle(),
+            description: id,
+            panelId: id
+        }));
+
+        const selection = await vscode.window.showQuickPick(items, {
+            placeHolder: 'Select browser instance to navigate'
+        });
+
+        if (selection) {
+            targetPanel = instances.get(selection.panelId);
+        }
+    }
+
+    if (!targetPanel) {
+        return;
+    }
+
+    // Prompt for URL
+    const url = await vscode.window.showInputBox({
+        prompt: 'Enter URL to navigate to',
+        placeHolder: 'https://example.com',
+        validateInput: (value: string) => {
+            if (!value) {
+                return 'URL cannot be empty';
+            }
+            // Basic URL validation
+            if (!value.startsWith('http://') && !value.startsWith('https://') && !value.startsWith('file://')) {
+                return 'URL must start with http://, https://, or file://';
+            }
+            return null;
+        }
+    });
+
+    if (url) {
+        targetPanel.navigateToUrl(url);
+        targetPanel.reveal();
+    }
+}
+
 async function closeCurrentBrowser(): Promise<void> {
     // Get the active webview panel
     const instances = ScreencastPanel.getAllInstances();
@@ -191,6 +247,10 @@ export function activate(context: vscode.ExtensionContext): void {
 
     context.subscriptions.push(vscode.commands.registerCommand(`${SETTINGS_STORE_NAME}.closeCurrentBrowser`, (): void => {
         void closeCurrentBrowser();
+    }));
+
+    context.subscriptions.push(vscode.commands.registerCommand(`${SETTINGS_STORE_NAME}.navigateBrowser`, (): void => {
+        void navigateBrowser(context);
     }));
 
     void vscode.commands.executeCommand('setContext', 'titleCommandsRegistered', true);

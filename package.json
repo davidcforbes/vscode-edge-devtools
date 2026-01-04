@@ -92,6 +92,11 @@
                 "command": "vscode-edge-devtools.closeCurrentBrowser",
                 "title": "Close Current Browser",
                 "category": "Microsoft Edge Tools"
+            },
+            {
+                "command": "vscode-edge-devtools.navigateBrowser",
+                "title": "Navigate Browser to URL",
+                "category": "Microsoft Edge Tools"
             }
         ],
         "configuration": {
