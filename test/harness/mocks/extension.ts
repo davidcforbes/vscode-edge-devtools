@@ -138,6 +138,12 @@ export class ExtensionMock extends EventEmitter {
     }
 
     async executeCommand(id: string, ...args: unknown[]): Promise<unknown> {
+        // Handle built-in VS Code commands
+        if (id === 'setContext') {
+            // setContext is a built-in command that sets context variables
+            return Promise.resolve();
+        }
+
         const handler = this.commands.get(id);
         if (!handler) {
             throw new Error(`Command not found: ${id}`);
@@ -205,6 +211,9 @@ export class ExtensionMock extends EventEmitter {
                     const disposable = { dispose: () => this.off('configChange', handler) };
                     this.disposables.push(disposable);
                     return disposable;
+                },
+                findFiles: async (_include: vscode.GlobPattern, _exclude?: vscode.GlobPattern | null, _maxResults?: number) => {
+                    return [];
                 },
             },
             ViewColumn: {
