@@ -1,3 +1,85 @@
+## 3.0.0
+
+### 🚨 BREAKING CHANGES
+
+This is a major release that transforms the extension from a full DevTools integration into a lightweight browser viewer. The extension now focuses exclusively on viewing and interacting with web applications inside VS Code.
+
+**Removed Features:**
+* **DevTools Panels**: Elements, Console, Network, Performance, Memory, Application panels have been removed
+* **CSS Mirroring**: Live CSS editing and source map synchronization removed
+* **Webhint Integration**: Code hints and accessibility analysis removed
+* **Debugging Features**: Breakpoints and debugger protocol support removed
+* **Source Editing**: Direct source file editing from DevTools removed
+
+**Why These Changes?**
+The extension has been streamlined to focus on its core browser viewing capability, resulting in:
+- 85% code reduction (from ~4,750 to ~700 lines)
+- Simpler, more maintainable codebase
+- Faster performance and smaller installation size
+- Clear, focused feature set
+
+### ✨ New Features
+
+* **Multi-Instance Support**: Open and manage multiple browser windows simultaneously
+  - Each browser instance runs independently
+  - No interference between different browser sessions
+  - Perfect for testing multiple environments or versions side-by-side
+
+* **Instance-Numbered Panel Titles**: Browser panels now show unique identifiers
+  - Titles display instance number and current page (e.g., "Browser 1: localhost:3000")
+  - Titles update automatically when navigating to new pages
+  - Easy to identify which browser you're working with
+
+* **Status Bar Integration**: New status bar item shows total browser count
+  - Displays number of active browser instances
+  - Click to view list of all open browsers
+  - Quick access to browser management
+
+* **Browser Management Commands**:
+  - `New Browser Window`: Open additional browser instances
+  - `List Open Browsers`: View and switch to any open browser
+  - `Switch to Browser`: Quick switcher for browser instances
+  - `Close Current Browser`: Close the active browser panel
+
+### 🔄 Changes
+
+* **Extension Renamed**: Now called "Browser Viewer for VS Code" (was "Microsoft Edge Tools for VS Code")
+* **New Description**: Updated to reflect browser viewing focus
+* **Category Change**: Moved from "Debuggers" to "Other" category
+* **Updated Keywords**: Replaced DevTools-focused keywords with viewer-focused ones
+
+### 🗑️ Removed Dependencies
+
+* `vscode-webhint`: No longer needed after webhint removal
+* `vscode-languageclient`: No longer needed
+* `@opentelemetry/tracing`: No longer needed
+
+### 📚 Documentation
+
+* Updated README.md with browser viewer focus
+* Comprehensive CLAUDE.md rewrite documenting simplified architecture
+* Added multi-instance pattern documentation
+* Migration notes explaining feature changes
+
+### 🏗️ Technical Improvements
+
+* Simplified architecture with clear separation of concerns
+* Improved WebSocket message handling for navigation events
+* Better test infrastructure with CLI test harness
+* Enhanced extension mock for better testing support
+
+### 💡 Migration Guide
+
+If you were using the removed DevTools features:
+- **Elements/Console/Network panels**: Use Microsoft Edge DevTools directly or the standalone Edge DevTools extension
+- **CSS Mirroring**: Use VS Code's built-in Live Server with browser DevTools
+- **Webhint**: Install the standalone webhint extension
+- **Debugging**: Use VS Code's built-in JavaScript debugger or Edge DevTools
+
+The browser viewer functionality remains fully functional and is now better optimized for multi-instance workflows.
+
+---
+
 ## 2.1.10
 * **[Bug Fix]**: Ramping up CDN Version - [PR #3665](https://github.com/microsoft/vscode-edge-devtools/pull/3665)
 * **[Bug Fix]**: Fixing A11y issues in screencast - [PR #3594](https://github.com/microsoft/vscode-edge-devtools/pull/3594)
