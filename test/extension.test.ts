@@ -23,7 +23,6 @@ describe("extension", () => {
         let context: ExtensionContext;
         let commandMock: jest.Mock;
         let mockUtils: Partial<Mocked<typeof import("../src/utils")>>;
-        let mockRegisterTree: jest.Mock;
         let mockProviderRefresh: jest.Mock;
         let mockProviderConstructor: jest.Mock;
         let mockClipboard: jest.Mock;
@@ -62,7 +61,6 @@ describe("extension", () => {
             // Mock out vscode command registration
             const mockVSCode = createFakeVSCode();
             commandMock = mockVSCode.commands.registerCommand;
-            mockRegisterTree = mockVSCode.window.registerTreeDataProvider;
             mockClipboard = mockVSCode.env.clipboard.writeText;
             jest.doMock("vscode", () => mockVSCode, { virtual: true });
             jest.resetModules();
@@ -82,44 +80,19 @@ describe("extension", () => {
             // Activation should add the commands as subscriptions on the context
             newExtension.activate(context);
 
-            expect(context.subscriptions.length).toBe(18);
-            expect(commandMock).toHaveBeenCalledTimes(17);
+            // Extension now registers only 5 core commands + 1 config change handler = 6 subscriptions
+            expect(context.subscriptions.length).toBe(6);
+            expect(commandMock).toHaveBeenCalledTimes(5);
             expect(commandMock)
                 .toHaveBeenNthCalledWith(1, `${SETTINGS_STORE_NAME}.attach`, expect.any(Function));
             expect(commandMock)
                 .toHaveBeenNthCalledWith(2, `${SETTINGS_STORE_NAME}.launch`, expect.any(Function));
             expect(commandMock)
-                .toHaveBeenNthCalledWith(3, `${SETTINGS_VIEW_NAME}.launch`, expect.any(Function));
+                .toHaveBeenNthCalledWith(3, `${SETTINGS_VIEW_NAME}.toggleInspect`, expect.any(Function));
             expect(commandMock)
-                .toHaveBeenNthCalledWith(4, `${SETTINGS_VIEW_NAME}.refresh`, expect.any(Function));
+                .toHaveBeenNthCalledWith(4, `${SETTINGS_VIEW_NAME}.launchHtml`, expect.any(Function));
             expect(commandMock)
-                .toHaveBeenNthCalledWith(5, `${SETTINGS_VIEW_NAME}.attach`, expect.any(Function));
-            expect(commandMock)
-                .toHaveBeenNthCalledWith(6, `${SETTINGS_VIEW_NAME}.toggleScreencast`, expect.any(Function));
-            expect(commandMock)
-                .toHaveBeenNthCalledWith(7, `${SETTINGS_VIEW_NAME}.toggleInspect`, expect.any(Function));
-            expect(commandMock)
-                .toHaveBeenNthCalledWith(8, `${SETTINGS_VIEW_NAME}.openSettings`, expect.any(Function));
-            expect(commandMock)
-                .toHaveBeenNthCalledWith(9, `${SETTINGS_VIEW_NAME}.viewChangelog`, expect.any(Function));
-            expect(commandMock)
-                .toHaveBeenNthCalledWith(10, `${SETTINGS_VIEW_NAME}.close-instance`, expect.any(Function));
-            expect(commandMock)
-                .toHaveBeenNthCalledWith(11, `${SETTINGS_VIEW_NAME}.copyItem`, expect.any(Function));
-            expect(commandMock)
-                .toHaveBeenNthCalledWith(12, `${SETTINGS_VIEW_NAME}.configureLaunchJson`, expect.any(Function));
-            expect(commandMock)
-                .toHaveBeenNthCalledWith(13, `${SETTINGS_VIEW_NAME}.launchProject`, expect.any(Function));
-            expect(commandMock)
-                .toHaveBeenNthCalledWith(14, `${SETTINGS_VIEW_NAME}.viewDocumentation`, expect.any(Function));
-            expect(commandMock)
-                .toHaveBeenNthCalledWith(15, `${SETTINGS_VIEW_NAME}.cssMirrorContent`, expect.any(Function));
-            expect(commandMock)
-                .toHaveBeenNthCalledWith(16, `${SETTINGS_VIEW_NAME}.launchHtml`, expect.any(Function));
-            expect(commandMock)
-                .toHaveBeenNthCalledWith(17, `${SETTINGS_VIEW_NAME}.launchScreencast`, expect.any(Function));
-            expect(mockRegisterTree)
-                .toHaveBeenNthCalledWith(1, `${SETTINGS_VIEW_NAME}.targets`, expect.any(Object));
+                .toHaveBeenNthCalledWith(5, `${SETTINGS_VIEW_NAME}.launchScreencast`, expect.any(Function));
         });
 
         it("requests targets on attach command", async () => {

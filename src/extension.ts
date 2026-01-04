@@ -7,7 +7,6 @@ import * as debugCore from 'vscode-chrome-debug-core';
 import TelemetryReporter from '@vscode/extension-telemetry';
 import { ScreencastPanel } from './screencastPanel';
 import {
-    buttonCode,
     createTelemetryReporter,
     fixRemoteWebSocket,
     getBrowserPath,
@@ -45,41 +44,12 @@ export function activate(context: vscode.ExtensionContext): void {
         void launch(context, opts.launchUrl);
     }));
 
-    // Register commands
-    context.subscriptions.push(vscode.commands.registerCommand(
-        `${SETTINGS_VIEW_NAME}.launch`,
-        async (fromEmptyTargetView?: boolean) => {
-            if (fromEmptyTargetView) {
-                telemetryReporter.sendTelemetryEvent('user/buttonPress', { 'VSCode.buttonCode': buttonCode.emptyTargetListLaunchBrowserInstance });
-            } else {
-                telemetryReporter.sendTelemetryEvent('user/buttonPress', { 'VSCode.buttonCode': buttonCode.launchBrowserInstance });
-            }
-            await launch(context);
-        }));
-    // Note: attach command moved to main attach() function below which shows quick pick
-
-    // Note: toggleScreencast command removed - use attach command instead
-
     context.subscriptions.push(vscode.commands.registerCommand(
         `${SETTINGS_VIEW_NAME}.toggleInspect`,
         (enabled: boolean) => {
             if (ScreencastPanel.instance) {
                 ScreencastPanel.instance.toggleInspect(enabled);
             }
-        }));
-
-    context.subscriptions.push(vscode.commands.registerCommand(`${SETTINGS_VIEW_NAME}.openSettings`, () => {
-        telemetryReporter.sendTelemetryEvent('user/buttonPress', { 'VSCode.buttonCode': buttonCode.openSettings });
-        void vscode.commands.executeCommand('workbench.action.openSettings', `${SETTINGS_STORE_NAME}`);
-    }));
-    context.subscriptions.push(vscode.commands.registerCommand(`${SETTINGS_VIEW_NAME}.viewChangelog`, () => {
-        telemetryReporter.sendTelemetryEvent('user/buttonPress', { 'VSCode.buttonCode': buttonCode.viewChangelog });
-        void vscode.env.openExternal(vscode.Uri.parse('https://github.com/microsoft/vscode-edge-devtools/blob/main/CHANGELOG.md'));
-    }));
-    // Note: close-instance and copyItem commands removed with tree view
-    context.subscriptions.push(vscode.commands.registerCommand(`${SETTINGS_VIEW_NAME}.viewDocumentation`, () => {
-            telemetryReporter.sendTelemetryEvent('user/buttonPress', { 'VSCode.buttonCode': buttonCode.viewDocumentation });
-            void vscode.env.openExternal(vscode.Uri.parse('https://learn.microsoft.com/microsoft-edge/visual-studio-code/microsoft-edge-devtools-extension'));
         }));
 
     context.subscriptions.push(vscode.commands.registerCommand(`${SETTINGS_VIEW_NAME}.launchHtml`, async (fileUri: vscode.Uri): Promise<void> => {
