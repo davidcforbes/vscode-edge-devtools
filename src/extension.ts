@@ -29,7 +29,7 @@ import { ErrorReporter } from './errorReporter';
 import { ErrorCodes } from './common/errorCodes';
 
 let telemetryReporter: Readonly<TelemetryReporter>;
-let browserInstance: Browser;
+const browserInstances = new Map<string, Browser>();
 
 export function activate(context: vscode.ExtensionContext): void {
     if (!telemetryReporter) {
@@ -69,6 +69,7 @@ export async function launchHtml(context: vscode.ExtensionContext, fileUri: vsco
     const { port, userDataDir } = getRemoteEndpointSettings();
     const browserPath = await getBrowserPath();
     const browser = await launchBrowser(browserPath, port, url, userDataDir, /** headless */ false);
+    browserInstances.set(url, browser);
 
     // Get the websocket URL from the launched browser
     if (browser) {
@@ -92,7 +93,8 @@ export async function launchScreencast(context: vscode.ExtensionContext, fileUri
 
     const { port, userDataDir } = getRemoteEndpointSettings();
     const browserPath = await getBrowserPath();
-    await launchBrowser(browserPath, port, url, userDataDir, /** headless */ true);
+    const browser = await launchBrowser(browserPath, port, url, userDataDir, /** headless */ true);
+    browserInstances.set(url, browser);
     await attach(context, url, undefined, true);
 }
 
@@ -235,11 +237,12 @@ export async function launch(context: vscode.ExtensionContext, launchUrl?: strin
             const browserProps = { exe: `${knownBrowser?.toLowerCase()}` };
             telemetryReporter.sendTelemetryEvent('command/launch/browser', browserProps);
 
-        browserInstance = await launchBrowser(browserPath, port, url, userDataDir);
+        const browser = await launchBrowser(browserPath, port, url, userDataDir);
+        browserInstances.set(url, browser);
         if (url !== SETTINGS_DEFAULT_URL) {
             reportUrlType(url, telemetryReporter);
         }
-        browserInstance.on('targetchanged',  (target: Target) => {
+        browser.on('targetchanged',  (target: Target) => {
             if (target.type() === TargetType.PAGE) {
                 reportUrlType(target.url(), telemetryReporter);
             }
