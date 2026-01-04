@@ -23,8 +23,6 @@ describe("extension", () => {
         let context: ExtensionContext;
         let commandMock: jest.Mock;
         let mockUtils: Partial<Mocked<typeof import("../src/utils")>>;
-        let mockProviderRefresh: jest.Mock;
-        let mockProviderConstructor: jest.Mock;
         let mockClipboard: jest.Mock;
 
         beforeEach(() => {
@@ -45,15 +43,6 @@ describe("extension", () => {
                 reportExtensionSettings: jest.fn(),
             };
             jest.doMock("../src/utils", () => mockUtils);
-            jest.doMock("../src/launchDebugProvider");
-
-            mockProviderRefresh = jest.fn();
-            mockProviderConstructor = jest.fn(() => ({refresh: mockProviderRefresh}));
-            jest.doMock("../src/cdpTargetsProvider", () => {
-                return {
-                    CDPTargetsProvider: mockProviderConstructor,
-                };
-            });
 
             const mockLanguageClient = createFakeLanguageClient()
             jest.doMock("vscode-languageclient/node", () => mockLanguageClient, { virtual: true });

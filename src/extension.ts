@@ -87,7 +87,7 @@ export async function launchHtml(context: vscode.ExtensionContext, fileUri: vsco
             const session = await target.createCDPSession();
             const targetInfo = await session.send('Target.getTargetInfo');
             if (targetInfo && targetInfo.targetInfo) {
-                await attach(context, url, undefined, false, false);
+                await attach(context, url, undefined, false);
             }
         }
     }
@@ -101,7 +101,7 @@ export async function launchScreencast(context: vscode.ExtensionContext, fileUri
     const { port, userDataDir } = getRemoteEndpointSettings();
     const browserPath = await getBrowserPath();
     await launchBrowser(browserPath, port, url, userDataDir, /** headless */ true);
-    await attach(context, url, undefined, true, true);
+    await attach(context, url, undefined, true);
 }
 
 export function deactivate(): void {
@@ -109,7 +109,7 @@ export function deactivate(): void {
 }
 
 export async function attach(
-    context: vscode.ExtensionContext, attachUrl?: string, config?: Partial<IUserConfig>, useRetry?: boolean, screencastOnly?: boolean): Promise<void> {
+    context: vscode.ExtensionContext, attachUrl?: string, config?: Partial<IUserConfig>, useRetry?: boolean): Promise<void> {
     if (!telemetryReporter) {
         telemetryReporter = createTelemetryReporter(context);
     }
