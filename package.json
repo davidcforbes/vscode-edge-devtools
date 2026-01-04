@@ -98,11 +98,6 @@
                     "default": "",
                     "description": "The default url to open when launching the browser without a target"
                 },
-                "vscode-edge-devtools.defaultEntrypoint": {
-                    "type": "string",
-                    "default": "index.html",
-                    "description": "The default entrypoint into your webpage. Used to resolve debugging urls without a pathname"
-                },
                 "vscode-edge-devtools.userDataDir": {
                     "type": [
                         "string",
@@ -110,40 +105,6 @@
                     ],
                     "default": true,
                     "description": "By default, Microsoft Edge is launched with a separate user profile in a temp folder. Use this option to override the path. You can also set to false to launch with your default user profile instead."
-                },
-                "vscode-edge-devtools.webRoot": {
-                    "type": "string",
-                    "description": "The absolute path to the webserver root. Used to resolve paths like `/app.js` to files on disk",
-                    "default": "${workspaceFolder}"
-                },
-                "vscode-edge-devtools.pathMapping": {
-                    "type": "object",
-                    "default": {
-                        "/": "${workspaceFolder}"
-                    },
-                    "description": "A set of mappings for rewriting the locations of source files from what the sourcemap says, to their locations on disk"
-                },
-                "vscode-edge-devtools.sourceMapPathOverrides": {
-                    "type": "object",
-                    "description": "A set of mappings to override the locations of source map files.",
-                    "default": {
-                        "webpack:///./*": "${webRoot}/*",
-                        "webpack:///src/*": "${webRoot}/*",
-                        "webpack:///*": "*",
-                        "webpack:///./~/*": "${webRoot}/node_modules/*",
-                        "webpack://*": "${webRoot}/*",
-                        "meteor://💻app/*": "${webRoot}/*"
-                    }
-                },
-                "vscode-edge-devtools.sourceMaps": {
-                    "type": "boolean",
-                    "description": "Use JavaScript source maps (if they exist)",
-                    "default": true
-                },
-                "vscode-edge-devtools.showWorkers": {
-                    "type": "boolean",
-                    "description": "Show service and shared workers in the target list.",
-                    "default": false
                 },
                 "vscode-edge-devtools.headless": {
                     "type": "boolean",
@@ -179,16 +140,6 @@
                         "Microsoft Edge Tools for VS Code will use Microsoft Edge Dev version",
                         "Microsoft Edge Tools for VS Code will use Microsoft Edge Canary version"
                     ]
-                },
-                "vscode-edge-devtools.webhint": {
-                    "type": "boolean",
-                    "default": true,
-                    "description": "Enable feedback from webhint on source files to improve accessibility, compatibility, security and more."
-                },
-                "vscode-edge-devtools.webhintInstallNotification": {
-                    "type": "boolean",
-                    "default": false,
-                    "description": "Turn off notification for webhint installation failures."
                 }
             }
         },
