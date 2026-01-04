@@ -92,9 +92,28 @@ export class PanelSocket extends EventEmitter {
 
     private onMessage(message: { data: WebSocket.Data }) {
         if (this.isConnected) {
+            const messageStr = message.data.toString();
+
+            // Check for navigation events in CDP messages
+            try {
+                const cdpMessage = JSON.parse(messageStr);
+
+                // Detect Page.frameNavigated event (fires when page navigates)
+                if (cdpMessage.method === 'Page.frameNavigated' && cdpMessage.params?.frame?.url) {
+                    this.emit('navigation', JSON.stringify({ url: cdpMessage.params.frame.url }));
+                }
+
+                // Detect Target.targetInfoChanged event (fires when target info changes, including URL)
+                if (cdpMessage.method === 'Target.targetInfoChanged' && cdpMessage.params?.targetInfo?.url) {
+                    this.emit('navigation', JSON.stringify({ url: cdpMessage.params.targetInfo.url }));
+                }
+            } catch (e) {
+                // Ignore parse errors - message may not be JSON
+            }
+
             // Forward the message onto the devtools
             // eslint-disable-next-line @typescript-eslint/no-base-to-string
-            this.postMessageToDevTools('message', message.data.toString());
+            this.postMessageToDevTools('message', messageStr);
         }
     }
 

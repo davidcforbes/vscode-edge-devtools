@@ -13,7 +13,6 @@ import { PanelSocket } from './panelSocket';
 import { ScreencastView } from './screencast/view';
 import {
     SETTINGS_STORE_NAME,
-    SETTINGS_SCREENCAST_WEBVIEW_NAME,
 } from './utils';
 import TelemetryReporter from '@vscode/extension-telemetry';
 
@@ -23,10 +22,14 @@ export class ScreencastPanel {
     private readonly panel: vscode.WebviewPanel;
     private readonly telemetryReporter: TelemetryReporter;
     private readonly panelId: string;
+    private readonly instanceNumber: number;
     private targetUrl: string;
+    private currentPageUrl: string;
     private panelSocket: PanelSocket;
     private screencastStartTime;
     private static instances = new Map<string, ScreencastPanel>();
+    private static instanceCounter = 0;
+    private static onInstanceCountChanged: (() => void) | undefined;
 
     private constructor(
         panelId: string,
@@ -38,15 +41,18 @@ export class ScreencastPanel {
         this.panel = panel;
         this.context = context;
         this.targetUrl = targetUrl;
+        this.currentPageUrl = '';
         this.extensionPath = this.context.extensionPath;
         this.telemetryReporter = telemetryReporter;
         this.screencastStartTime = Date.now();
+        this.instanceNumber = ++ScreencastPanel.instanceCounter;
 
         this.panelSocket = new PanelSocket(this.targetUrl, (e, msg) => this.postToWebview(e, msg));
         this.panelSocket.on('close', () => this.onSocketClose());
         this.panelSocket.on('telemetry', (message: string) => this.onSocketTelemetry(message));
         this.panelSocket.on('writeToClipboard', (message: string) => this.onSaveToClipboard(message));
         this.panelSocket.on('readClipboard', () => this.onGetClipboardText());
+        this.panelSocket.on('navigation', (message: string) => this.onNavigation(message));
 
         // Handle closing
         this.panel.onDidDispose(() => {
@@ -98,10 +104,19 @@ export class ScreencastPanel {
 
         this.panel.dispose();
         this.panelSocket.dispose();
+
+        // Notify of instance count change
+        if (ScreencastPanel.onInstanceCountChanged) {
+            ScreencastPanel.onInstanceCountChanged();
+        }
     }
 
     static getAllInstances(): Map<string, ScreencastPanel> {
         return ScreencastPanel.instances;
+    }
+
+    static setInstanceCountChangedCallback(callback: () => void): void {
+        ScreencastPanel.onInstanceCountChanged = callback;
     }
 
     reveal(): void {
@@ -160,6 +175,40 @@ export class ScreencastPanel {
         });
     }
 
+    private onNavigation(message: string): void {
+        try {
+            const navData = JSON.parse(message) as { url: string };
+            if (navData.url && navData.url !== this.currentPageUrl) {
+                this.currentPageUrl = navData.url;
+                this.updatePanelTitle();
+            }
+        } catch (e) {
+            // Ignore parse errors
+        }
+    }
+
+    private extractFriendlyName(url: string): string {
+        try {
+            const urlObj = new URL(url);
+            // For localhost, include port
+            if (urlObj.hostname === 'localhost' || urlObj.hostname === '127.0.0.1') {
+                return `${urlObj.hostname}:${urlObj.port || '80'}`;
+            }
+            // For other URLs, just return hostname
+            return urlObj.hostname;
+        } catch (e) {
+            // If URL parsing fails, return the URL as-is
+            return url;
+        }
+    }
+
+    private updatePanelTitle(): void {
+        const friendlyName = this.currentPageUrl
+            ? this.extractFriendlyName(this.currentPageUrl)
+            : 'Browser';
+        this.panel.title = `Browser ${this.instanceNumber}: ${friendlyName}`;
+    }
+
     static createOrShow(context: vscode.ExtensionContext,
         telemetryReporter: TelemetryReporter, targetUrl: string): void {
         const column = vscode.ViewColumn.Beside;
@@ -175,10 +224,10 @@ export class ScreencastPanel {
             return;
         }
 
-        // Create a new panel
+        // Create a new panel with temporary title
         const panel = vscode.window.createWebviewPanel(
             SETTINGS_STORE_NAME,
-            SETTINGS_SCREENCAST_WEBVIEW_NAME,
+            'Browser', // Temporary title, will be updated when navigation occurs
             column,
             {
                 enableCommandUris: true,
@@ -191,5 +240,13 @@ export class ScreencastPanel {
         // Create and store the new instance
         const instance = new ScreencastPanel(panelId, panel, context, telemetryReporter, targetUrl);
         ScreencastPanel.instances.set(panelId, instance);
+
+        // Update title with instance number
+        instance.updatePanelTitle();
+
+        // Notify of instance count change
+        if (ScreencastPanel.onInstanceCountChanged) {
+            ScreencastPanel.onInstanceCountChanged();
+        }
     }
 }

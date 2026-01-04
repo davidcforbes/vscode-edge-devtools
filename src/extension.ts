@@ -30,6 +30,7 @@ import { ErrorCodes } from './common/errorCodes';
 
 let telemetryReporter: Readonly<TelemetryReporter>;
 const browserInstances = new Map<string, Browser>();
+let browserStatusBarItem: vscode.StatusBarItem;
 
 async function newBrowserWindow(context: vscode.ExtensionContext): Promise<void> {
     const url = await vscode.window.showInputBox({
@@ -131,10 +132,31 @@ async function closeCurrentBrowser(): Promise<void> {
     }
 }
 
+function updateBrowserStatusBar(): void {
+    const instanceCount = ScreencastPanel.getAllInstances().size;
+
+    if (instanceCount === 0) {
+        browserStatusBarItem.hide();
+    } else {
+        browserStatusBarItem.text = `$(browser) ${instanceCount} Browser${instanceCount === 1 ? '' : 's'}`;
+        browserStatusBarItem.tooltip = `${instanceCount} active browser instance${instanceCount === 1 ? '' : 's'}`;
+        browserStatusBarItem.show();
+    }
+}
+
 export function activate(context: vscode.ExtensionContext): void {
     if (!telemetryReporter) {
         telemetryReporter = createTelemetryReporter(context);
     }
+
+    // Create status bar item for browser instance count
+    browserStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+    browserStatusBarItem.command = `${SETTINGS_STORE_NAME}.listOpenBrowsers`;
+    context.subscriptions.push(browserStatusBarItem);
+    updateBrowserStatusBar();
+
+    // Register callback to update status bar when instance count changes
+    ScreencastPanel.setInstanceCountChangedCallback(() => updateBrowserStatusBar());
 
     context.subscriptions.push(vscode.commands.registerCommand(`${SETTINGS_STORE_NAME}.attach`, (): void => {
         void attach(context);

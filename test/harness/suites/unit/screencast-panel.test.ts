@@ -26,14 +26,15 @@ export const suite: TestSuite = {
 
                 await context.wait(200);
 
-                const panels = context.getPanels('vscode-edge-devtools.screencastPanel');
+                const panels = context.getPanels('vscode-edge-devtools');
 
                 if (panels.length === 0) {
                     throw new Error('No screencast panel created');
                 }
 
-                if (panels[0].title !== 'Browser') {
-                    throw new Error(`Expected title 'Browser', got '${panels[0].title}'`);
+                // Title should be "Browser 1: Browser" (instance 1 with no URL yet)
+                if (!panels[0].title.startsWith('Browser 1:')) {
+                    throw new Error(`Expected title to start with 'Browser 1:', got '${panels[0].title}'`);
                 }
             }
         },

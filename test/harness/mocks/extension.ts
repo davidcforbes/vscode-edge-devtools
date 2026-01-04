@@ -181,6 +181,16 @@ export class ExtensionMock extends EventEmitter {
                     });
                     return panel;
                 },
+                createStatusBarItem: (alignment?: vscode.StatusBarAlignment, priority?: number) => {
+                    return {
+                        text: '',
+                        tooltip: '',
+                        command: undefined,
+                        show: () => {},
+                        hide: () => {},
+                        dispose: () => {},
+                    } as vscode.StatusBarItem;
+                },
                 showQuickPick: async <T extends vscode.QuickPickItem>(
                     items: readonly T[] | Thenable<readonly T[]>
                 ): Promise<T | undefined> => {
@@ -228,6 +238,10 @@ export class ExtensionMock extends EventEmitter {
                 Seven: 7,
                 Eight: 8,
                 Nine: 9,
+            },
+            StatusBarAlignment: {
+                Left: 1,
+                Right: 2,
             },
             ExtensionMode: {
                 Production: 1,
