@@ -37,31 +37,31 @@ async function newBrowserWindow(context: vscode.ExtensionContext): Promise<void>
         value: 'about:blank',
         placeHolder: 'https://example.com'
     });
-    
+
     if (url) {
         await launch(context, url);
     }
 }
 
-async function listOpenBrowsers(context: vscode.ExtensionContext): Promise<void> {
+async function listOpenBrowsers(_context: vscode.ExtensionContext): Promise<void> {
     const instances = ScreencastPanel.getAllInstances();
-    
+
     if (instances.size === 0) {
         void vscode.window.showInformationMessage('No browser instances are currently open.');
         return;
     }
-    
+
     const items = Array.from(instances.entries()).map(([id, panel]) => ({
         label: panel.getTitle(),
         description: id,
         detail: `Panel ID: ${id}`,
         panelId: id
     }));
-    
+
     const selection = await vscode.window.showQuickPick(items, {
         placeHolder: 'Select a browser instance to view details'
     });
-    
+
     if (selection) {
         const panel = instances.get(selection.panelId);
         if (panel) {
@@ -70,24 +70,24 @@ async function listOpenBrowsers(context: vscode.ExtensionContext): Promise<void>
     }
 }
 
-async function switchToBrowser(context: vscode.ExtensionContext): Promise<void> {
+async function switchToBrowser(_context: vscode.ExtensionContext): Promise<void> {
     const instances = ScreencastPanel.getAllInstances();
-    
+
     if (instances.size === 0) {
         void vscode.window.showInformationMessage('No browser instances are currently open.');
         return;
     }
-    
+
     const items = Array.from(instances.entries()).map(([id, panel]) => ({
         label: panel.getTitle(),
         description: id,
         panelId: id
     }));
-    
+
     const selection = await vscode.window.showQuickPick(items, {
         placeHolder: 'Switch to browser instance'
     });
-    
+
     if (selection) {
         const panel = instances.get(selection.panelId);
         if (panel) {
@@ -99,30 +99,30 @@ async function switchToBrowser(context: vscode.ExtensionContext): Promise<void> 
 async function closeCurrentBrowser(): Promise<void> {
     // Get the active webview panel
     const instances = ScreencastPanel.getAllInstances();
-    
+
     if (instances.size === 0) {
         void vscode.window.showInformationMessage('No browser instances are currently open.');
         return;
     }
-    
+
     if (instances.size === 1) {
         // Only one instance, close it
         const panel = Array.from(instances.values())[0];
         panel.dispose();
         return;
     }
-    
+
     // Multiple instances - let user select which to close
     const items = Array.from(instances.entries()).map(([id, panel]) => ({
         label: panel.getTitle(),
         description: id,
         panelId: id
     }));
-    
+
     const selection = await vscode.window.showQuickPick(items, {
         placeHolder: 'Select browser instance to close'
     });
-    
+
     if (selection) {
         const panel = instances.get(selection.panelId);
         if (panel) {

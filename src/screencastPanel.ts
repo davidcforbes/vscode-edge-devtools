@@ -163,10 +163,10 @@ export class ScreencastPanel {
     static createOrShow(context: vscode.ExtensionContext,
         telemetryReporter: TelemetryReporter, targetUrl: string): void {
         const column = vscode.ViewColumn.Beside;
-        
+
         // Use targetUrl as the unique panel ID
         const panelId = targetUrl;
-        
+
         // Check if a panel for this target already exists
         const existingPanel = ScreencastPanel.instances.get(panelId);
         if (existingPanel) {
@@ -174,12 +174,12 @@ export class ScreencastPanel {
             existingPanel.panel.reveal(column);
             return;
         }
-        
+
         // Create a new panel
         const panel = vscode.window.createWebviewPanel(
-            SETTINGS_STORE_NAME, 
-            SETTINGS_SCREENCAST_WEBVIEW_NAME, 
-            column, 
+            SETTINGS_STORE_NAME,
+            SETTINGS_SCREENCAST_WEBVIEW_NAME,
+            column,
             {
                 enableCommandUris: true,
                 enableScripts: true,
@@ -187,7 +187,7 @@ export class ScreencastPanel {
             }
         );
         panel.iconPath = vscode.Uri.joinPath(context.extensionUri, 'icon.png');
-        
+
         // Create and store the new instance
         const instance = new ScreencastPanel(panelId, panel, context, telemetryReporter, targetUrl);
         ScreencastPanel.instances.set(panelId, instance);
