@@ -17,7 +17,6 @@ import {
     SETTINGS_SCREENCAST_WEBVIEW_NAME,
 } from './utils';
 import TelemetryReporter from '@vscode/extension-telemetry';
-import { providedHeadlessDebugConfig } from './launchConfigManager';
 
 export class ScreencastPanel {
     private readonly context: vscode.ExtensionContext;
@@ -102,9 +101,6 @@ export class ScreencastPanel {
 
         this.panel.dispose();
         this.panelSocket.dispose();
-        if (vscode.debug.activeDebugSession?.name.includes(providedHeadlessDebugConfig.name)) {
-            void vscode.commands.executeCommand('workbench.action.debug.stop');
-        }
     }
 
     private toggleDevTools() {

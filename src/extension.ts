@@ -8,7 +8,6 @@ import TelemetryReporter from '@vscode/extension-telemetry';
 import { CDPTarget } from './cdpTarget';
 import { CDPTargetsProvider } from './cdpTargetsProvider';
 import { ScreencastPanel } from './screencastPanel';
-import { LaunchDebugProvider } from './launchDebugProvider';
 import {
     buttonCode,
     createTelemetryReporter,
@@ -34,7 +33,6 @@ import {
     getCSSMirrorContentEnabled,
     setCSSMirrorContentEnabled,
 } from './utils';
-import { LaunchConfigManager, providedHeadlessDebugConfig, providedLaunchDevToolsConfig } from './launchConfigManager';
 import { ErrorReporter } from './errorReporter';
 import { ErrorCodes } from './common/errorCodes';
 
@@ -47,8 +45,6 @@ export function activate(context: vscode.ExtensionContext): void {
         telemetryReporter = createTelemetryReporter(context);
     }
 
-    // Check if launch.json exists and has supported config to populate side pane welcome message
-    LaunchConfigManager.instance.updateLaunchConfig();
     context.subscriptions.push(vscode.commands.registerCommand(`${SETTINGS_STORE_NAME}.attach`, (): void => {
         void attach(context);
     }));
@@ -60,10 +56,6 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(vscode.commands.registerCommand(`${SETTINGS_STORE_NAME}.attachToCurrentDebugTarget`, (debugSessionId: string | undefined, config: Partial<IUserConfig>): void => {
         void attachToCurrentDebugTarget(context, debugSessionId, config);
     }));
-
-    // Register the launch provider
-    vscode.debug.registerDebugConfigurationProvider(`${SETTINGS_STORE_NAME}.debug`,
-        new LaunchDebugProvider(context, telemetryReporter, attach, launch));
 
     // Register the side-panel view and its commands
     cdpTargetsProvider = new CDPTargetsProvider(context, telemetryReporter);
@@ -174,41 +166,6 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(vscode.commands.registerCommand(
         `${SETTINGS_VIEW_NAME}.copyItem`,
         (target: CDPTarget) => vscode.env.clipboard.writeText(target.tooltip)));
-    context.subscriptions.push(vscode.commands.registerCommand(
-        `${SETTINGS_VIEW_NAME}.configureLaunchJson`,
-        () => {
-            telemetryReporter.sendTelemetryEvent('user/buttonPress', {
-                'VSCode.buttonCode': LaunchConfigManager.instance.getLaunchConfig() === 'None' ? buttonCode.generateLaunchJson : buttonCode.configureLaunchJson,
-            });
-            void LaunchConfigManager.instance.configureLaunchJson();
-        }));
-    context.subscriptions.push(vscode.commands.registerCommand(
-        `${SETTINGS_VIEW_NAME}.launchProject`,
-        () => {
-            telemetryReporter.sendTelemetryEvent('user/buttonPress', { 'VSCode.buttonCode': buttonCode.launchProject });
-            LaunchConfigManager.instance.updateLaunchConfig();
-            if (vscode.workspace.workspaceFolders) {
-                const workspaceFolder = vscode.workspace.workspaceFolders[0];
-                if (LaunchConfigManager.instance.isValidLaunchConfig()) {
-                    void vscode.debug.startDebugging(workspaceFolder, LaunchConfigManager.instance.getLaunchConfig());
-                } else {
-                    const autoConfigButtonText = 'Auto-configure launch.json and launch project';
-                    void vscode.window.showErrorMessage('Cannot launch a project without a valid launch.json. Please open a folder in the editor.', autoConfigButtonText).then(value => {
-                        if (value === autoConfigButtonText) {
-                            void LaunchConfigManager.instance.configureLaunchJson().then(() => vscode.debug.startDebugging(workspaceFolder, LaunchConfigManager.instance.getLaunchConfig()));
-                        }
-                    });
-                }
-                cdpTargetsProvider.refresh();
-            } else {
-                const openFolderText = 'Open Folder';
-                void vscode.window.showErrorMessage('Cannot launch a project for an empty workspace. Please open a folder in the editor and try again.', openFolderText).then(value => {
-                    if (value === openFolderText) {
-                        void vscode.commands.executeCommand('workbench.action.files.openFolder');
-                    }
-                });
-            }
-        }));
     context.subscriptions.push(vscode.commands.registerCommand(`${SETTINGS_VIEW_NAME}.viewDocumentation`, () => {
             telemetryReporter.sendTelemetryEvent('user/buttonPress', { 'VSCode.buttonCode': buttonCode.viewDocumentation });
             void vscode.env.openExternal(vscode.Uri.parse('https://learn.microsoft.com/microsoft-edge/visual-studio-code/microsoft-edge-devtools-extension'));
@@ -221,7 +178,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
     context.subscriptions.push(vscode.commands.registerCommand(`${SETTINGS_VIEW_NAME}.launchHtml`, async (fileUri: vscode.Uri): Promise<void> => {
         telemetryReporter.sendTelemetryEvent('contextMenu/launchHtml');
-        await launchHtml(fileUri);
+        await launchHtml(context, fileUri);
     }));
 
 
@@ -236,37 +193,39 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.workspace.onDidChangeConfiguration(event => reportChangedExtensionSetting(event, telemetryReporter));
 }
 
-export async function launchHtml(fileUri: vscode.Uri): Promise<void> {
-    const edgeDebugConfig = providedHeadlessDebugConfig;
-    const devToolsAttachConfig = providedLaunchDevToolsConfig;
-    if (!vscode.env.remoteName) {
-        edgeDebugConfig.url = `file://${fileUri.fsPath}`;
-        devToolsAttachConfig.url = `file://${fileUri.fsPath}`;
-        void vscode.debug.startDebugging(undefined, edgeDebugConfig).then(() => vscode.debug.startDebugging(undefined, devToolsAttachConfig));
-    } else {
-        // Parse the filename from the remoteName, file authority and path e.g. file://wsl.localhost/ubuntu-20.04/test/index.html
-        const url = `file://${vscode.env.remoteName}.localhost/${fileUri.authority.split('+')[1]}/${fileUri.fsPath.replace(/\\/g, '/')}`;
-        edgeDebugConfig.url = url;
-        devToolsAttachConfig.url = url;
-        const { port, userDataDir } = getRemoteEndpointSettings();
-        const browserPath = await getBrowserPath();
-        await launchBrowser(browserPath, port, url, userDataDir, /** headless */ true).then(() => vscode.debug.startDebugging(undefined, devToolsAttachConfig));
+export async function launchHtml(context: vscode.ExtensionContext, fileUri: vscode.Uri): Promise<void> {
+    const url = !vscode.env.remoteName
+        ? `file://${fileUri.fsPath}`
+        : `file://${vscode.env.remoteName}.localhost/${fileUri.authority.split('+')[1]}/${fileUri.fsPath.replace(/\\/g, '/')}`;
+
+    const { port, userDataDir } = getRemoteEndpointSettings();
+    const browserPath = await getBrowserPath();
+    const browser = await launchBrowser(browserPath, port, url, userDataDir, /** headless */ false);
+
+    // Get the websocket URL from the launched browser
+    if (browser) {
+        const pages = await browser.pages();
+        if (pages && pages.length > 0) {
+            const page = pages[0];
+            const target = page.target();
+            const session = await target.createCDPSession();
+            const targetInfo = await session.send('Target.getTargetInfo');
+            if (targetInfo && targetInfo.targetInfo) {
+                await attach(context, url, undefined, false, false);
+            }
+        }
     }
 }
 
 export async function launchScreencast(context: vscode.ExtensionContext, fileUri: vscode.Uri): Promise<void> {
-    const edgeDebugConfig = providedHeadlessDebugConfig;
-    if (!vscode.env.remoteName) {
-        edgeDebugConfig.url = `file://${fileUri.fsPath}`;
-        void vscode.debug.startDebugging(undefined, edgeDebugConfig).then(() => attach(context, fileUri.fsPath, undefined, true, true));
-    } else {
-        // Parse the filename from the remoteName, file authority and path e.g. file://wsl.localhost/ubuntu-20.04/test/index.html
-        const url = `file://${vscode.env.remoteName}.localhost/${fileUri.authority.split('+')[1]}/${fileUri.fsPath.replace(/\\/g, '/')}`;
-        edgeDebugConfig.url = url;
-        const { port, userDataDir } = getRemoteEndpointSettings();
-        const browserPath = await getBrowserPath();
-        await launchBrowser(browserPath, port,  url, userDataDir, /** headless */ true).then(() => attach(context, url, undefined, true, true));
-    }
+    const url = !vscode.env.remoteName
+        ? `file://${fileUri.fsPath}`
+        : `file://${vscode.env.remoteName}.localhost/${fileUri.authority.split('+')[1]}/${fileUri.fsPath.replace(/\\/g, '/')}`;
+
+    const { port, userDataDir } = getRemoteEndpointSettings();
+    const browserPath = await getBrowserPath();
+    await launchBrowser(browserPath, port, url, userDataDir, /** headless */ true);
+    await attach(context, url, undefined, true, true);
 }
 
 export function deactivate(): void {

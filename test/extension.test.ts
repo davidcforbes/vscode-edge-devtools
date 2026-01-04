@@ -458,7 +458,7 @@ describe("extension", () => {
             const expectedUrl = `file://${expectedRemoteName}.localhost/ubuntu-20.04/test/path.html`;
 
             const newExtension = await import("../src/extension");
-            await newExtension.launchHtml(testFileUri);
+            await newExtension.launchHtml(createFakeExtensionContext(), testFileUri);
 
             expect(mockUtils.getRemoteEndpointSettings).toHaveBeenCalled()
             expect(mockUtils.getBrowserPath).toHaveBeenCalled();
@@ -486,7 +486,7 @@ describe("extension", () => {
             const expectedUrl = `file://test/path.html`;
 
             const newExtension = await import("../src/extension");
-            await newExtension.launchHtml(testFileUri);
+            await newExtension.launchHtml(createFakeExtensionContext(), testFileUri);
             expect(startDebuggingMock).toHaveBeenNthCalledWith(1, undefined, expect.objectContaining({
                 url: expectedUrl
             }));
