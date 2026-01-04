@@ -160,8 +160,8 @@ describe("extension", () => {
 
         it("performs registered commands correctly", async () => {
             const mockPanelShow = jest.fn();
-            jest.doMock("../src/devtoolsPanel", () => ({
-                DevToolsPanel: {
+            jest.doMock("../src/screencastPanel", () => ({
+                ScreencastPanel: {
                     createOrShow: mockPanelShow,
                 },
             }));
@@ -229,7 +229,7 @@ describe("extension", () => {
             };
 
             jest.doMock("vscode", () => mocks.vscode, { virtual: true });
-            jest.doMock("../src/devtoolsPanel", () => mocks.panel);
+            jest.doMock("../src/screencastPanel", () => mocks.panel);
             jest.doMock("../src/utils", () => mocks.utils);
             jest.resetModules();
         });
@@ -400,7 +400,7 @@ describe("extension", () => {
         const fakeBrowser = {on: () => null};
         let mockReporter: Mocked<Readonly<TelemetryReporter>>;
         let mockUtils: Partial<Mocked<typeof import("../src/utils")>>;
-        let mockPanel: Partial<Mocked<typeof import("../src/devtoolsPanel")>>;
+        let mockPanel: Partial<Mocked<typeof import("../src/screencastPanel")>>;
         let startDebuggingMock: jest.Mock;
         let mockVSCode: any;
 
@@ -432,7 +432,7 @@ describe("extension", () => {
             };
 
             mockPanel = {
-                DevToolsPanel: {
+                ScreencastPanel: {
                     createOrShow: jest.fn(),
                 } as any,
             };
@@ -441,7 +441,7 @@ describe("extension", () => {
 
             jest.doMock("vscode", () => mockVSCode, { virtual: true });
             jest.doMock("../src/utils", () => mockUtils);
-            jest.doMock("../src/devtoolsPanel", () => mockPanel);
+            jest.doMock("../src/screencastPanel", () => mockPanel);
             jest.resetModules();
         });
 
@@ -595,11 +595,11 @@ describe("extension", () => {
             const newExtension = await import("../src/extension");
 
             await newExtension.launch(createFakeExtensionContext());
-            expect(mockPanel.DevToolsPanel!.createOrShow).toHaveBeenCalledWith(
+            expect(mockPanel.ScreencastPanel!.createOrShow).toHaveBeenCalledWith(
                 expect.any(Object),
                 expect.any(Object),
                 target.webSocketDebuggerUrl,
-                fakeRuntimeConfig,
+                fakeRuntimeConfig.isJsDebugProxiedCDPConnection,
             );
         });
 
@@ -682,7 +682,7 @@ describe("extension", () => {
             };
 
             jest.doMock("vscode", () => mocks.vscode, { virtual: true });
-            jest.doMock("../src/devtoolsPanel", () => mocks.panel);
+            jest.doMock("../src/screencastPanel", () => mocks.panel);
             jest.doMock("../src/utils", () => mocks.utils);
             jest.resetModules();
         });

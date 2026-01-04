@@ -151,7 +151,7 @@ export class Screencast {
         this.cdpConnection.registerForEvent('Page.screencastFrame', result => this.onScreencastFrame(result));
         this.cdpConnection.registerForEvent('Page.screencastVisibilityChanged', result => this.onScreencastVisibilityChanged(result));
 
-        // This message comes from the DevToolsPanel instance.
+        // This message comes from the ScreencastPanel instance.
         this.cdpConnection.registerForEvent('DevTools.toggleInspect', result => this.onToggleInspect(result));
         this.cdpConnection.registerWriteToClipboardFunction(result => this.onSaveToClipboard(result));
         this.cdpConnection.registerReadClipboardAndPasteFunction(() => this.getClipboardContents());

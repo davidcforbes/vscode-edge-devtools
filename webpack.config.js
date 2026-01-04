@@ -32,17 +32,6 @@ module.exports = env => {
         {
             ...commonConfig,
             entry: {
-                host: './src/host/mainHost.ts',
-            },
-            name: 'host',
-            output: {
-                filename: '[name].bundle.js',
-                path: path.resolve(__dirname, 'out/host'),
-            },
-        },
-        {
-            ...commonConfig,
-            entry: {
                 screencast: './src/screencast/main.ts',
             },
             name: 'screencast',
@@ -68,11 +57,10 @@ module.exports = env => {
                 libraryTarget: 'commonjs2',
                 path: path.resolve(__dirname, 'out'),
             },
-            // Copy startpage html to output bundle
+            // Copy resources to output bundle
             plugins: [
                 new copyPlugin({
                     patterns: [
-                        { from: 'startpage', to: 'startpage' },
                         { from: 'src/common/styles.css', to: 'common/styles.css' },
                         { from: 'icon.png', to: 'icon.png' },
                         { from: 'src/screencast/view.css', to: 'screencast/view.css' },

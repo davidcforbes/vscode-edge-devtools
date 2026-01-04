@@ -7,7 +7,6 @@ import * as debugCore from 'vscode-chrome-debug-core';
 import TelemetryReporter from '@vscode/extension-telemetry';
 import { CDPTarget } from './cdpTarget';
 import { CDPTargetsProvider } from './cdpTargetsProvider';
-import { DevToolsPanel } from './devtoolsPanel';
 import { ScreencastPanel } from './screencastPanel';
 import { LaunchDebugProvider } from './launchDebugProvider';
 import {
@@ -130,7 +129,7 @@ export function activate(context: vscode.ExtensionContext): void {
             if (isJsDebugProxiedCDPConnection) {
                 runtimeConfig.isJsDebugProxiedCDPConnection = true;
             }
-            DevToolsPanel.createOrShow(context, telemetryReporter, target.websocketUrl, runtimeConfig);
+            ScreencastPanel.createOrShow(context, telemetryReporter, target.websocketUrl, runtimeConfig.isJsDebugProxiedCDPConnection);
         }));
 
     context.subscriptions.push(vscode.commands.registerCommand(
@@ -477,7 +476,7 @@ export async function attach(
                 if (screencastOnly) {
                     ScreencastPanel.createOrShow(context, telemetryReporter, targetWebsocketUrl, false);
                 } else {
-                    DevToolsPanel.createOrShow(context, telemetryReporter, targetWebsocketUrl, runtimeConfig);
+                    ScreencastPanel.createOrShow(context, telemetryReporter, targetWebsocketUrl, runtimeConfig.isJsDebugProxiedCDPConnection);
                 }
             } else if (useRetry) {
                 // Wait for a little bit until we retry
@@ -504,7 +503,7 @@ export async function attach(
                     if (screencastOnly) {
                         ScreencastPanel.createOrShow(context, telemetryReporter, selection.detail, false);
                     } else {
-                        DevToolsPanel.createOrShow(context, telemetryReporter, selection.detail, runtimeConfig);
+                        ScreencastPanel.createOrShow(context, telemetryReporter, selection.detail, runtimeConfig.isJsDebugProxiedCDPConnection);
                     }
                 }
             }
@@ -548,7 +547,7 @@ export async function attachToCurrentDebugTarget(context: vscode.ExtensionContex
         telemetryReporter.sendTelemetryEvent('command/attachToCurrentDebugTarget/devtools');
         const runtimeConfig = getRuntimeConfig(config);
         runtimeConfig.isJsDebugProxiedCDPConnection = true;
-        DevToolsPanel.createOrShow(context, telemetryReporter, targetWebsocketUrl, runtimeConfig);
+        ScreencastPanel.createOrShow(context, telemetryReporter, targetWebsocketUrl, runtimeConfig.isJsDebugProxiedCDPConnection);
     } else {
         const errorMessage = 'Unable to attach DevTools to current debug session.';
         telemetryReporter.sendTelemetryErrorEvent('command/attachToCurrentDebugTarget/devtools', {message: errorMessage});
@@ -575,7 +574,7 @@ export async function launch(context: vscode.ExtensionContext, launchUrl?: strin
         // Show the devtools
         telemetryReporter.sendTelemetryEvent('command/launch/devtools', telemetryProps);
         const runtimeConfig = getRuntimeConfig(config);
-        DevToolsPanel.createOrShow(context, telemetryReporter, target.webSocketDebuggerUrl, runtimeConfig);
+        ScreencastPanel.createOrShow(context, telemetryReporter, target.webSocketDebuggerUrl, runtimeConfig.isJsDebugProxiedCDPConnection);
     } else {
         // Launch a new instance
         const browserPath = await getBrowserPath(config);

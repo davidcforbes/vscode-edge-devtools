@@ -15,10 +15,8 @@ import { ScreencastView } from './screencast/view';
 import {
     SETTINGS_STORE_NAME,
     SETTINGS_SCREENCAST_WEBVIEW_NAME,
-    SETTINGS_VIEW_NAME,
 } from './utils';
 import TelemetryReporter from '@vscode/extension-telemetry';
-import { DevToolsPanel } from './devtoolsPanel';
 import { providedHeadlessDebugConfig } from './launchConfigManager';
 
 export class ScreencastPanel {
@@ -26,7 +24,6 @@ export class ScreencastPanel {
     private readonly extensionPath: string;
     private readonly panel: vscode.WebviewPanel;
     private readonly telemetryReporter: TelemetryReporter;
-    private isJsDebugProxiedCDPConnection = false;
     private targetUrl: string;
     private panelSocket: PanelSocket;
     private screencastStartTime;
@@ -44,7 +41,6 @@ export class ScreencastPanel {
         this.extensionPath = this.context.extensionPath;
         this.telemetryReporter = telemetryReporter;
         this.screencastStartTime = Date.now();
-        this.isJsDebugProxiedCDPConnection = isJsDebugProxiedCDPConnection;
 
         if (isJsDebugProxiedCDPConnection) {
             this.panelSocket = new JsDebugProxyPanelSocket(this.targetUrl, (e, msg) => this.postToWebview(e, msg));
@@ -106,18 +102,13 @@ export class ScreencastPanel {
 
         this.panel.dispose();
         this.panelSocket.dispose();
-        if (!DevToolsPanel.instance && vscode.debug.activeDebugSession?.name.includes(providedHeadlessDebugConfig.name)) {
+        if (vscode.debug.activeDebugSession?.name.includes(providedHeadlessDebugConfig.name)) {
             void vscode.commands.executeCommand('workbench.action.debug.stop');
         }
     }
 
     private toggleDevTools() {
-        const websocketUrl = this.targetUrl;
-        if (DevToolsPanel.instance) {
-            DevToolsPanel.instance.dispose();
-        } else {
-            void vscode.commands.executeCommand(`${SETTINGS_VIEW_NAME}.attach`, { websocketUrl }, this.isJsDebugProxiedCDPConnection);
-        }
+        // DevTools functionality has been removed - this is now a no-op
     }
 
     toggleInspect(enabled: boolean): void {
@@ -141,7 +132,7 @@ export class ScreencastPanel {
         const inspectorUri = this.panel.webview.asWebviewUri(inspectorPath);
 		const codiconsUri = this.panel.webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'node_modules', '@vscode/codicons', 'dist', 'codicon.css'));
         const cssPath = this.panel.webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'out/screencast', 'view.css'));
-        const view = new ScreencastView(this.panel.webview.cspSource, cssPath, codiconsUri, inspectorUri, !!DevToolsPanel.instance);
+        const view = new ScreencastView(this.panel.webview.cspSource, cssPath, codiconsUri, inspectorUri, false);
         return view.render();
     }
 
