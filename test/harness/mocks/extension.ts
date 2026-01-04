@@ -110,12 +110,16 @@ export class ExtensionMock extends EventEmitter {
 
         // Activate actual extension
         try {
-            // @ts-ignore - Dynamic import of compiled extension
             // From out/test/harness/mocks/extension.js to out/extension.js
+            // @ts-ignore - Dynamic import of compiled extension
             const extensionModule = await import('../../../extension.js');
+
+            // Webpack CommonJS2 exports are accessible via 'default' or 'module.exports' when imported as ES module
+            const ext = extensionModule.default || extensionModule['module.exports'] || extensionModule;
+
             const context = this.createExtensionContext();
-            if (extensionModule.activate) {
-                await extensionModule.activate(context);
+            if (ext.activate) {
+                await ext.activate(context);
             }
         } catch (error) {
             console.error('Failed to activate extension:', error);
@@ -216,6 +220,16 @@ export class ExtensionMock extends EventEmitter {
                 Eight: 8,
                 Nine: 9,
             },
+            ExtensionMode: {
+                Production: 1,
+                Development: 2,
+                Test: 3,
+            },
+            EventEmitter: class {
+                event: any;
+                fire(_data?: any): void {}
+                dispose(): void {}
+            },
             Uri: {
                 file: (path: string) => ({ scheme: 'file', path, fsPath: path } as vscode.Uri),
                 parse: (value: string) => ({ scheme: 'https', path: value } as vscode.Uri),
@@ -231,6 +245,14 @@ export class ExtensionMock extends EventEmitter {
                         return Promise.resolve();
                     },
                     readText: () => Promise.resolve(''),
+                },
+                createTelemetryLogger: (_sender: any, _options?: any) => {
+                    return {
+                        logUsage: () => {},
+                        logError: () => {},
+                        dispose: () => {},
+                        onDidChangeEnableStates: () => ({ dispose: () => {} }),
+                    };
                 },
             },
         };
