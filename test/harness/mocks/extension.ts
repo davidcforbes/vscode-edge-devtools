@@ -2,7 +2,14 @@
 // Licensed under the MIT License.
 
 import { EventEmitter } from 'events';
+import { createRequire } from 'module';
+import { fileURLToPath } from 'url';
+import * as path from 'path';
 import * as vscode from 'vscode';
+
+const require = createRequire(import.meta.url);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export interface TelemetryEvent {
     name: string;
@@ -88,7 +95,32 @@ export class ExtensionMock extends EventEmitter {
 
     async activate(): Promise<void> {
         // Mock activation - sets up global vscode mock
-        (global as any).vscode = this.createVSCodeMock();
+        const vscodeMock = this.createVSCodeMock();
+        (global as any).vscode = vscodeMock;
+
+        // Make vscode available to CommonJS require (for webpack bundles)
+        const Module = require('module');
+        const originalRequire = Module.prototype.require;
+        Module.prototype.require = function (id: string) {
+            if (id === 'vscode') {
+                return vscodeMock;
+            }
+            return originalRequire.apply(this, arguments as any);
+        };
+
+        // Activate actual extension
+        try {
+            // @ts-ignore - Dynamic import of compiled extension
+            // From out/test/harness/mocks/extension.js to out/extension.js
+            const extensionModule = await import('../../../extension.js');
+            const context = this.createExtensionContext();
+            if (extensionModule.activate) {
+                await extensionModule.activate(context);
+            }
+        } catch (error) {
+            console.error('Failed to activate extension:', error);
+            throw error;
+        }
     }
 
     async deactivate(): Promise<void> {

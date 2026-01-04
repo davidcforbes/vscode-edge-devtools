@@ -218,7 +218,14 @@
         "watch": "npm run watch-wp",
         "watch-wp": "webpack --watch",
         "lint": "eslint -c .eslintrc.mjs */*.ts",
-        "test": "npm run lint && jest --config package.json --runInBand --env=jsdom"
+        "test": "npm run lint && jest --config package.json --runInBand --env=jsdom",
+        "test:harness": "node out/test/harness/runner.js",
+        "test:harness:unit": "npm run test:harness -- --suite=unit",
+        "test:harness:integration": "npm run test:harness -- --suite=integration",
+        "test:harness:e2e": "npm run test:harness -- --e2e",
+        "test:harness:watch": "npm run test:harness -- --watch",
+        "test:harness:coverage": "npm run test:harness -- --coverage",
+        "test:all": "npm run test && npm run test:harness"
     },
     "dependencies": {
         "@vscode/codicons": "0.0.40",

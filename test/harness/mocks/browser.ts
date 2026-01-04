@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 import { EventEmitter } from 'events';
-import { Server as WebSocketServer, WebSocket } from 'ws';
+import { WebSocketServer, WebSocket } from 'ws';
 
 export interface CDPMessage {
     id?: number;
@@ -14,7 +14,6 @@ export interface CDPMessage {
 
 export class CDPTargetMock extends EventEmitter {
     private socket?: WebSocket;
-    private commandId = 0;
 
     constructor(
         public id: string,
