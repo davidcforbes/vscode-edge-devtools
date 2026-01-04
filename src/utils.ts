@@ -59,7 +59,6 @@ export interface IRuntimeConfig {
     sourceMapPathOverrides: IStringDictionary<string>;
     sourceMaps: boolean;
     webRoot: string;
-    isJsDebugProxiedCDPConnection: boolean;
     useLocalEdgeWatch: boolean;
     devtoolsBaseUri?: string;
     defaultEntrypoint?: string;
@@ -442,7 +441,6 @@ export function getRuntimeConfig(config: Partial<IUserConfig> = {}): IRuntimeCon
         browserFlavor,
         sourceMaps: SETTINGS_DEFAULT_SOURCE_MAPS,
         webRoot: SETTINGS_DEFAULT_WEB_ROOT,
-        isJsDebugProxiedCDPConnection: false,
         useLocalEdgeWatch: DEBUG,
         devtoolsBaseUri: DEVTOOLS_BASE_URI,
         defaultEntrypoint: SETTINGS_DEFAULT_ENTRY_POINT,

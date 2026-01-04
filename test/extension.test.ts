@@ -41,8 +41,6 @@ describe("extension", () => {
                 getListOfTargets: jest.fn().mockReturnValue([]),
                 getRemoteEndpointSettings: jest.fn(),
                 getRuntimeConfig: jest.fn(),
-                getJsDebugCDPProxyWebsocketUrl: jest.fn(),
-                getActiveDebugSessionId: jest.fn(),
                 reportFileExtensionTypes: jest.fn(),
                 reportChangedExtensionSetting: jest.fn(),
                 reportExtensionSettings: jest.fn(),
@@ -84,44 +82,42 @@ describe("extension", () => {
             // Activation should add the commands as subscriptions on the context
             newExtension.activate(context);
 
-            expect(context.subscriptions.length).toBe(19);
-            expect(commandMock).toHaveBeenCalledTimes(18);
+            expect(context.subscriptions.length).toBe(18);
+            expect(commandMock).toHaveBeenCalledTimes(17);
             expect(commandMock)
                 .toHaveBeenNthCalledWith(1, `${SETTINGS_STORE_NAME}.attach`, expect.any(Function));
             expect(commandMock)
                 .toHaveBeenNthCalledWith(2, `${SETTINGS_STORE_NAME}.launch`, expect.any(Function));
             expect(commandMock)
-                .toHaveBeenNthCalledWith(3, `${SETTINGS_STORE_NAME}.attachToCurrentDebugTarget`, expect.any(Function));
+                .toHaveBeenNthCalledWith(3, `${SETTINGS_VIEW_NAME}.launch`, expect.any(Function));
             expect(commandMock)
-                .toHaveBeenNthCalledWith(4, `${SETTINGS_VIEW_NAME}.launch`, expect.any(Function));
+                .toHaveBeenNthCalledWith(4, `${SETTINGS_VIEW_NAME}.refresh`, expect.any(Function));
             expect(commandMock)
-                .toHaveBeenNthCalledWith(5, `${SETTINGS_VIEW_NAME}.refresh`, expect.any(Function));
+                .toHaveBeenNthCalledWith(5, `${SETTINGS_VIEW_NAME}.attach`, expect.any(Function));
             expect(commandMock)
-                .toHaveBeenNthCalledWith(6, `${SETTINGS_VIEW_NAME}.attach`, expect.any(Function));
+                .toHaveBeenNthCalledWith(6, `${SETTINGS_VIEW_NAME}.toggleScreencast`, expect.any(Function));
             expect(commandMock)
-                .toHaveBeenNthCalledWith(7, `${SETTINGS_VIEW_NAME}.toggleScreencast`, expect.any(Function));
+                .toHaveBeenNthCalledWith(7, `${SETTINGS_VIEW_NAME}.toggleInspect`, expect.any(Function));
             expect(commandMock)
-                .toHaveBeenNthCalledWith(8, `${SETTINGS_VIEW_NAME}.toggleInspect`, expect.any(Function));
+                .toHaveBeenNthCalledWith(8, `${SETTINGS_VIEW_NAME}.openSettings`, expect.any(Function));
             expect(commandMock)
-                .toHaveBeenNthCalledWith(9, `${SETTINGS_VIEW_NAME}.openSettings`, expect.any(Function));
+                .toHaveBeenNthCalledWith(9, `${SETTINGS_VIEW_NAME}.viewChangelog`, expect.any(Function));
             expect(commandMock)
-                .toHaveBeenNthCalledWith(10, `${SETTINGS_VIEW_NAME}.viewChangelog`, expect.any(Function));
+                .toHaveBeenNthCalledWith(10, `${SETTINGS_VIEW_NAME}.close-instance`, expect.any(Function));
             expect(commandMock)
-                .toHaveBeenNthCalledWith(11, `${SETTINGS_VIEW_NAME}.close-instance`, expect.any(Function));
+                .toHaveBeenNthCalledWith(11, `${SETTINGS_VIEW_NAME}.copyItem`, expect.any(Function));
             expect(commandMock)
-                .toHaveBeenNthCalledWith(12, `${SETTINGS_VIEW_NAME}.copyItem`, expect.any(Function));
+                .toHaveBeenNthCalledWith(12, `${SETTINGS_VIEW_NAME}.configureLaunchJson`, expect.any(Function));
             expect(commandMock)
-                .toHaveBeenNthCalledWith(13, `${SETTINGS_VIEW_NAME}.configureLaunchJson`, expect.any(Function));
+                .toHaveBeenNthCalledWith(13, `${SETTINGS_VIEW_NAME}.launchProject`, expect.any(Function));
             expect(commandMock)
-                .toHaveBeenNthCalledWith(14, `${SETTINGS_VIEW_NAME}.launchProject`, expect.any(Function));
+                .toHaveBeenNthCalledWith(14, `${SETTINGS_VIEW_NAME}.viewDocumentation`, expect.any(Function));
             expect(commandMock)
-                .toHaveBeenNthCalledWith(15, `${SETTINGS_VIEW_NAME}.viewDocumentation`, expect.any(Function));
+                .toHaveBeenNthCalledWith(15, `${SETTINGS_VIEW_NAME}.cssMirrorContent`, expect.any(Function));
             expect(commandMock)
-                .toHaveBeenNthCalledWith(16, `${SETTINGS_VIEW_NAME}.cssMirrorContent`, expect.any(Function));
+                .toHaveBeenNthCalledWith(16, `${SETTINGS_VIEW_NAME}.launchHtml`, expect.any(Function));
             expect(commandMock)
-                .toHaveBeenNthCalledWith(17, `${SETTINGS_VIEW_NAME}.launchHtml`, expect.any(Function));
-            expect(commandMock)
-                .toHaveBeenNthCalledWith(18, `${SETTINGS_VIEW_NAME}.launchScreencast`, expect.any(Function));
+                .toHaveBeenNthCalledWith(17, `${SETTINGS_VIEW_NAME}.launchScreencast`, expect.any(Function));
             expect(mockRegisterTree)
                 .toHaveBeenNthCalledWith(1, `${SETTINGS_VIEW_NAME}.targets`, expect.any(Object));
         });
@@ -416,7 +412,6 @@ describe("extension", () => {
                 getRuntimeConfig: jest.fn().mockReturnValue(fakeRuntimeConfig),
                 launchBrowser: jest.fn().mockResolvedValue(fakeBrowser),
                 openNewTab: jest.fn().mockResolvedValue(null),
-                getJsDebugCDPProxyWebsocketUrl: jest.fn(),
                 buttonCode: { launch: '' },
                 reportChangedExtensionSetting: jest.fn(),
                 reportExtensionSettings: jest.fn(),
@@ -592,7 +587,6 @@ describe("extension", () => {
                 expect.any(Object),
                 expect.any(Object),
                 target.webSocketDebuggerUrl,
-                fakeRuntimeConfig.isJsDebugProxiedCDPConnection,
             );
         });
 
@@ -645,95 +639,6 @@ describe("extension", () => {
                     expect.objectContaining({ exe: t.exe }),
                 );
             }
-        });
-    });
-    describe("attachToCurrentDebugTarget", () => {
-        let mocks: {
-            panel: any,
-            utils: Partial<Mocked<typeof import("../src/utils")>>,
-            vscode: any,
-        };
-        let mockTelemetry: Mocked<Readonly<TelemetryReporter>>;
-        const websocketUrl = 'ws://127.0.0.1:9222/uniquePath';
-
-        beforeEach(() => {
-            mockTelemetry = createFakeTelemetryReporter();
-
-            mocks = {
-                panel: {
-                    DevToolsPanel: {
-                        createOrShow: jest.fn(),
-                    },
-                },
-                utils: {
-                    createTelemetryReporter: jest.fn((_: ExtensionContext) => mockTelemetry),
-                    getRuntimeConfig: jest.fn().mockReturnValue(fakeRuntimeConfig),
-                    getActiveDebugSessionId: jest.fn().mockReturnValue('vscode-active-debug-session-id'),
-                    getJsDebugCDPProxyWebsocketUrl: jest.fn().mockResolvedValue(websocketUrl),
-                },
-                vscode: createFakeVSCode(),
-            };
-
-            jest.doMock("vscode", () => mocks.vscode, { virtual: true });
-            jest.doMock("../src/screencastPanel", () => mocks.panel);
-            jest.doMock("../src/utils", () => mocks.utils);
-            jest.resetModules();
-        });
-
-        it("creates a telemetry reporter", async () => {
-            const newExtension = await import("../src/extension");
-
-            // Activation should create a new reporter
-            await newExtension.attachToCurrentDebugTarget(createFakeExtensionContext());
-            expect(mocks.utils.createTelemetryReporter).toHaveBeenCalled();
-        });
-
-        it("finds the active debug session id if one is not provided", async () => {
-            const newExtension = await import("../src/extension");
-
-            await newExtension.attachToCurrentDebugTarget(createFakeExtensionContext());
-            expect(mocks.utils.getActiveDebugSessionId).toHaveBeenCalled();
-        });
-
-        it("throws an error if there is no active debug session", async () => {
-            const expectedErrorMessage = 'No active debug session';
-
-            mocks.utils.getActiveDebugSessionId!.mockReturnValueOnce(undefined);
-            const newExtension = await import("../src/extension");
-
-            await newExtension.attachToCurrentDebugTarget(createFakeExtensionContext());
-            expect(mocks.vscode.window.showErrorMessage).toHaveBeenCalledWith(expect.stringContaining(expectedErrorMessage));
-        });
-
-        it("creates a panel with a constructed url", async () => {
-            const newExtension = await import("../src/extension");
-
-            await newExtension.attachToCurrentDebugTarget(createFakeExtensionContext());
-            expect(mocks.utils.getJsDebugCDPProxyWebsocketUrl).toHaveBeenCalled();
-            expect(mocks.panel.DevToolsPanel!.createOrShow).toHaveBeenCalledWith(
-                expect.any(Object),
-                expect.any(Object),
-                websocketUrl,
-                {...fakeRuntimeConfig, isJsDebugProxiedCDPConnection: true},
-            );
-        });
-
-        it("throws an error when unable to resolve the JsDebugCDPProxyWebSocketUrl", async () => {
-            mocks.utils.getJsDebugCDPProxyWebsocketUrl?.mockResolvedValueOnce(Error('Error Message'));
-            const newExtension = await import("../src/extension");
-
-            await newExtension.attachToCurrentDebugTarget(createFakeExtensionContext());
-            expect(mocks.utils.getJsDebugCDPProxyWebsocketUrl).toHaveBeenCalled();
-            expect(mocks.vscode.window.showErrorMessage).toHaveBeenCalledWith(expect.stringContaining('Error Message'));
-        });
-
-        it("shows an error if JsDebugCDPProxyWebSocketUrl is undefined", async () => {
-            mocks.utils.getJsDebugCDPProxyWebsocketUrl?.mockResolvedValueOnce(undefined);
-            const newExtension = await import("../src/extension");
-
-            await newExtension.attachToCurrentDebugTarget(createFakeExtensionContext());
-            expect(mocks.utils.getJsDebugCDPProxyWebsocketUrl).toHaveBeenCalled();
-            expect(mocks.vscode.window.showErrorMessage).toHaveBeenCalledWith(expect.stringContaining('Unable to attach DevTools to current debug session.'));
         });
     });
 });
