@@ -428,15 +428,6 @@ export async function openNewTab(hostname: string, port: number, tabUrl?: string
 }
 
 /**
- * Remove a '/' from the end of the specified string if it exists
- *
- * @param uri The string from which to remove the trailing slash (if any)
- */
-export function removeTrailingSlash(uri: string): string {
-    return (uri.endsWith('/') ? uri.slice(0, -1) : uri);
-}
-
-/**
  * Get the configuration settings that should be used at runtime.
  * The order of precedence is launch.json > extension settings > default values.
  *
@@ -518,21 +509,6 @@ export function replaceWebRootInSourceMapPathOverridesEntry(webRoot: string, ent
 }
 
 /**
- * Take in a devtools provided file url and append an html entrypoint if no path name is present.
- * This function will Throw() if sourcePath is not a valid URL
- *
- * @param sourcePath Url from devtools (i.e. http://localhost:8080/)
- * @param defaultEntrypoint The html file name to append (index.html).
- */
-export function addEntrypointIfNeeded(sourcePath: string, defaultEntrypoint: string): string {
-    const url = new URL(sourcePath);
-    if (!url.pathname || url.pathname === '/') {
-        return sourcePath.endsWith('/') ? `${sourcePath}${defaultEntrypoint}` : `${sourcePath}/${defaultEntrypoint}`;
-    }
-    return sourcePath;
-}
-
-/**
  * Walk through the list of mappings and find one that matches the sourcePath.
  * Once a match is found, replace the pattern in the value side of the mapping with
  * the rest of the path.
@@ -540,76 +516,6 @@ export function addEntrypointIfNeeded(sourcePath: string, defaultEntrypoint: str
  * @param sourcePath The source path to convert
  * @param pathMapping The list of mappings from source map to authored file path
  */
-export function applyPathMapping(
-    sourcePath: string,
-    pathMapping: IStringDictionary<string>): string {
-    const forwardSlashSourcePath = sourcePath.replace(/\\/g, '/');
-
-    // Sort the overrides by length, large to small
-    const sortedOverrideKeys = Object.keys(pathMapping)
-        .sort((a, b) => b.length - a.length);
-
-    // Iterate the key/values, only apply the first one that matches.
-    for (const leftPattern of sortedOverrideKeys) {
-        const rightPattern = pathMapping[leftPattern];
-
-        const asterisks = leftPattern.match(/\*/g) || [];
-        if (asterisks.length > 1) {
-            continue;
-        }
-
-        const replacePatternAsterisks = rightPattern.match(/\*/g) || [];
-        if (replacePatternAsterisks.length > asterisks.length) {
-            continue;
-        }
-
-        // Does it match?
-        const escapedLeftPattern = debugCore.utils.escapeRegexSpecialChars(leftPattern, '/*');
-        const leftRegexSegment = escapedLeftPattern
-            .replace(/\*/g, '(.*)')
-            .replace(/\\\\/g, '/');
-        const leftRegex = new RegExp(`^${leftRegexSegment}$`, 'i');
-        const overridePatternMatches = leftRegex.exec(forwardSlashSourcePath);
-        if (!overridePatternMatches) {
-            continue;
-        }
-
-        // Grab the value of the wildcard from the match above, replace the wildcard in the
-        // replacement pattern, and return the result.
-        const wildcardValue = overridePatternMatches[1];
-        let mappedPath = rightPattern.replace(/\*/g, wildcardValue);
-
-        // handling WSL case.
-        if (vscode.env.remoteName) {
-            return mappedPath;
-        }
-
-        mappedPath = debugCore.utils.properJoin(mappedPath); // Fix any ..'s
-        mappedPath = replaceWorkSpaceFolderPlaceholder(mappedPath);
-        return mappedPath;
-    }
-
-    return sourcePath;
-}
-
-/**
- * Verifies if a given path points to a local resource.
- * @param path the path to be tested
- * @returns True if the path points to a local resource false otherwise.
- */
-export function isLocalResource(path: string): boolean {
-    try {
-        const pathURL = new URL(path);
-        if (pathURL.protocol && !pathURL.protocol.includes('http')) {
-            return true;
-        }
-    } catch {
-        return false;
-    }
-
-    return false;
-}
-
 /**
  * Verifies if the headless checkbox in extension settings is enabled.
  */

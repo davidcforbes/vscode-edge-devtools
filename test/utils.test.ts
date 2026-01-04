@@ -4,8 +4,6 @@
 // Allow unused variables in the mocks to have leading underscore
 // tslint:disable: variable-name
 
-import * as path from "path";
-
 import { createFakeExtensionContext, createFakeGet, createFakeTelemetryReporter, createFakeVSCode, Mocked } from "./helpers/helpers";
 import { BrowserFlavor, IRemoteTargetJson, IUserConfig } from "../src/utils";
 import { ConfigurationChangeEvent } from "vscode";
@@ -685,20 +683,6 @@ describe("utils", () => {
         });
     });
 
-    describe("removeTrailingSlash", () => {
-        it("returns a string without a trailing slash", async () => {
-            expect(utils.removeTrailingSlash("hello/")).toEqual("hello");
-            expect(utils.removeTrailingSlash("hello//")).toEqual("hello/");
-            expect(utils.removeTrailingSlash("/")).toEqual("");
-        });
-
-        it("does nothing to strings without a trailing slash", async () => {
-            expect(utils.removeTrailingSlash("hello")).toEqual("hello");
-            expect(utils.removeTrailingSlash("hello\\")).toEqual("hello\\");
-            expect(utils.removeTrailingSlash("")).toEqual("");
-        });
-    });
-
     describe("getRuntimeConfig", () => {
         let fse: Mocked<typeof import("fs-extra")>;
         beforeEach(() => {
@@ -810,133 +794,6 @@ describe("utils", () => {
         });
     });
 
-    describe("addEntrypointIfNeeded", () => {
-        beforeEach(async () => {
-            jest.unmock("path");
-            jest.resetModules();
-            utils = await import("../src/utils");
-        });
-        it("appends index.html to a path", () => {
-            expect(utils.addEntrypointIfNeeded("http://localhost:8080", "index.html")).toEqual("http://localhost:8080/index.html");
-        });
-
-        it("appends index.html to a path", () => {
-            expect(utils.addEntrypointIfNeeded("http://localhost:8080/", "index.html")).toEqual("http://localhost:8080/index.html");
-        });
-
-        it("does not append index.html to a url already containing a pathname", () => {
-            expect(utils.addEntrypointIfNeeded("http://localhost:8080/main.css", "index.html")).toEqual("http://localhost:8080/main.css");
-        });
-    });
-
-    describe("applyPathMapping", () => {
-        function pathResolve(...segments: string[]): string {
-            let aPath = path.resolve.apply(null, segments);
-            if (aPath.match(/^[A-Za-z]:/)) {
-                aPath = aPath[0].toLowerCase() + aPath.substr(1);
-            }
-            return aPath;
-        }
-
-        beforeEach(async () => {
-            jest.unmock("path");
-            jest.resetModules();
-            utils = await import("../src/utils");
-        });
-
-        it("removes a matching webpack prefix", () => {
-            expect(utils.applyPathMapping("webpack:///src/app.js", {
-                "webpack:///*": pathResolve("/project/*"),
-            })).toEqual(pathResolve("/project/src/app.js"));
-        });
-
-        it("works using the laptop emoji", () => {
-            expect(utils.applyPathMapping("meteor:///💻app/src/main.js", {
-                "meteor:///💻app/*": pathResolve("/project/*"),
-            })).toEqual(
-                pathResolve("/project/src/main.js"));
-        });
-
-        it("does nothing when no overrides match", () => {
-            expect(utils.applyPathMapping("file:///c:/project/app.js", {
-                "webpack:///*": pathResolve("/project/*"),
-            })).toEqual("file:///c:/project/app.js");
-        });
-
-        it("resolves ..", () => {
-            expect(utils.applyPathMapping("/project/source/app.js", {
-                "/project/source/*": pathResolve("/") + "project/../*",
-            })).toEqual(pathResolve("/app.js"));
-        });
-
-        it("does nothing when match but asterisks don't match", () => {
-            expect(utils.applyPathMapping("webpack:///src/app.js", {
-                "webpack:///src/app.js": pathResolve("/project/*"),
-            })).toEqual("webpack:///src/app.js");
-        });
-
-        it("does nothing when match but too many asterisks", () => {
-            expect(utils.applyPathMapping("webpack:///src/code/app.js", {
-                "webpack:///*/code/app.js": pathResolve("/project/*/*"),
-            })).toEqual("webpack:///src/code/app.js");
-        });
-
-        it("does nothing when too many asterisks on left", () => {
-            expect(utils.applyPathMapping("webpack:///src/code/app.js", {
-                "webpack:///*/code/*/app.js": pathResolve("/project/*"),
-            })).toEqual("webpack:///src/code/app.js");
-        });
-
-        it("replaces an asterisk in the middle", () => {
-            expect(utils.applyPathMapping("webpack:///src/app.js", {
-                "webpack:///*/app.js": pathResolve("/project/*/app.js"),
-            })).toEqual(pathResolve("/project/src/app.js"));
-        });
-
-        it("replaces an asterisk at the beginning", () => {
-            expect(utils.applyPathMapping("/src/app.js", {
-                "*/app.js": pathResolve("/project/*/app.js"),
-            })).toEqual(pathResolve("/project/src/app.js"));
-        });
-
-        it("allows some regex characters in the pattern", () => {
-            expect(utils.applyPathMapping("webpack+(foo):///src/app.js", {
-                "webpack+(foo):///*/app.js": pathResolve("/project/*/app.js"),
-            })).toEqual(pathResolve("/project/src/app.js"));
-        });
-
-        it("replaces correctly when asterisk on left but not right", () => {
-            expect(utils.applyPathMapping("/src/app.js", {
-                "*/app.js": pathResolve("/project/app.js"),
-            })).toEqual(pathResolve("/project/app.js"));
-        });
-
-        it("the pattern is case-insensitive", () => {
-            expect(utils.applyPathMapping("/src/app.js", {
-                "*/APP.js": pathResolve("/project/*/app.js"),
-            })).toEqual(pathResolve("/project/src/app.js"));
-        });
-
-        it("works when multiple overrides provided", () => {
-            expect(utils.applyPathMapping("/src/app.js", {
-                "foo": "bar",
-                // tslint:disable-next-line: object-literal-sort-keys
-                "/file.js": pathResolve("/main.js"),
-                "*/app.js": pathResolve("/project/*/app.js"),
-                "/something/*/else.js": "main.js",
-            })).toEqual(pathResolve("/project/src/app.js"));
-        });
-
-        it("applies overrides in order by longest key first", () => {
-            expect(utils.applyPathMapping("/src/app.js", {
-                "*": pathResolve("/main.js"),
-                "*/app.js": pathResolve("/project/*/app.js"),
-                // tslint:disable-next-line: object-literal-sort-keys
-                "*.js": "main.js",
-            })).toEqual(pathResolve("/project/src/app.js"));
-        });
-    });
-
     describe("getActiveDebugSessionId", () => {
         it("retrieves the debug session id from vscode properly", () => {
             expect(utils.getActiveDebugSessionId()).toBe('vscode-session-debug-id');
@@ -970,20 +827,6 @@ describe("utils", () => {
             const result = await utils.getJsDebugCDPProxyWebsocketUrl('debugSessionId') as Error;
             expect(result).toBeInstanceOf(Error);
             expect(result.message).toBe('error message');
-        });
-    });
-
-    describe("isLocalResource", () => {
-        it("tests if a http URL returns false", async () => {
-            let result = utils.isLocalResource('http://bing.com');
-            expect(result).toBe(false);
-            result = utils.isLocalResource('https://www.bing.com');
-            expect(result).toBe(false);
-        });
-
-        it("tests if a local resource path returns true", async () => {
-            let result = utils.isLocalResource('g:/user/test.ico');
-            expect(result).toBe(true);
         });
     });
 
