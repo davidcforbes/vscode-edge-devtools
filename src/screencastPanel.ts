@@ -22,16 +22,19 @@ export class ScreencastPanel {
     private readonly extensionPath: string;
     private readonly panel: vscode.WebviewPanel;
     private readonly telemetryReporter: TelemetryReporter;
+    private readonly panelId: string;
     private targetUrl: string;
     private panelSocket: PanelSocket;
     private screencastStartTime;
-    static instance: ScreencastPanel | undefined;
+    private static instances = new Map<string, ScreencastPanel>();
 
     private constructor(
+        panelId: string,
         panel: vscode.WebviewPanel,
         context: vscode.ExtensionContext,
         telemetryReporter: TelemetryReporter,
         targetUrl: string) {
+        this.panelId = panelId;
         this.panel = panel;
         this.context = context;
         this.targetUrl = targetUrl;
@@ -91,7 +94,7 @@ export class ScreencastPanel {
     }
 
     dispose(): void {
-        ScreencastPanel.instance = undefined;
+        ScreencastPanel.instances.delete(this.panelId);
 
         this.panel.dispose();
         this.panelSocket.dispose();
@@ -99,10 +102,6 @@ export class ScreencastPanel {
 
     private toggleDevTools() {
         // DevTools functionality has been removed - this is now a no-op
-    }
-
-    toggleInspect(enabled: boolean): void {
-        encodeMessageForChannel(msg => this.panel.webview.postMessage(msg) as unknown as void, 'toggleInspect', { enabled });
     }
 
     private onSocketClose() {
@@ -152,16 +151,33 @@ export class ScreencastPanel {
     static createOrShow(context: vscode.ExtensionContext,
         telemetryReporter: TelemetryReporter, targetUrl: string): void {
         const column = vscode.ViewColumn.Beside;
-        if (ScreencastPanel.instance) {
-            ScreencastPanel.instance.dispose();
-        } else {
-            const panel = vscode.window.createWebviewPanel(SETTINGS_STORE_NAME, SETTINGS_SCREENCAST_WEBVIEW_NAME, column, {
+        
+        // Use targetUrl as the unique panel ID
+        const panelId = targetUrl;
+        
+        // Check if a panel for this target already exists
+        const existingPanel = ScreencastPanel.instances.get(panelId);
+        if (existingPanel) {
+            // Reveal the existing panel
+            existingPanel.panel.reveal(column);
+            return;
+        }
+        
+        // Create a new panel
+        const panel = vscode.window.createWebviewPanel(
+            SETTINGS_STORE_NAME, 
+            SETTINGS_SCREENCAST_WEBVIEW_NAME, 
+            column, 
+            {
                 enableCommandUris: true,
                 enableScripts: true,
                 retainContextWhenHidden: true,
-            });
-            panel.iconPath = vscode.Uri.joinPath(context.extensionUri, 'icon.png');
-            ScreencastPanel.instance = new ScreencastPanel(panel, context, telemetryReporter, targetUrl);
-        }
+            }
+        );
+        panel.iconPath = vscode.Uri.joinPath(context.extensionUri, 'icon.png');
+        
+        // Create and store the new instance
+        const instance = new ScreencastPanel(panelId, panel, context, telemetryReporter, targetUrl);
+        ScreencastPanel.instances.set(panelId, instance);
     }
 }

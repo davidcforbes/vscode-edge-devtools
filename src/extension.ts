@@ -44,14 +44,6 @@ export function activate(context: vscode.ExtensionContext): void {
         void launch(context, opts.launchUrl);
     }));
 
-    context.subscriptions.push(vscode.commands.registerCommand(
-        `${SETTINGS_VIEW_NAME}.toggleInspect`,
-        (enabled: boolean) => {
-            if (ScreencastPanel.instance) {
-                ScreencastPanel.instance.toggleInspect(enabled);
-            }
-        }));
-
     context.subscriptions.push(vscode.commands.registerCommand(`${SETTINGS_VIEW_NAME}.launchHtml`, async (fileUri: vscode.Uri): Promise<void> => {
         telemetryReporter.sendTelemetryEvent('contextMenu/launchHtml');
         await launchHtml(context, fileUri);

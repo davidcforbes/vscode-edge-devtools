@@ -23,7 +23,6 @@ describe("extension", () => {
         let context: ExtensionContext;
         let commandMock: jest.Mock;
         let mockUtils: Partial<Mocked<typeof import("../src/utils")>>;
-        let mockClipboard: jest.Mock;
 
         beforeEach(() => {
             // Initialize a fake context
@@ -50,7 +49,6 @@ describe("extension", () => {
             // Mock out vscode command registration
             const mockVSCode = createFakeVSCode();
             commandMock = mockVSCode.commands.registerCommand;
-            mockClipboard = mockVSCode.env.clipboard.writeText;
             jest.doMock("vscode", () => mockVSCode, { virtual: true });
             jest.resetModules();
         });
@@ -69,19 +67,17 @@ describe("extension", () => {
             // Activation should add the commands as subscriptions on the context
             newExtension.activate(context);
 
-            // Extension now registers only 5 core commands + 1 config change handler = 6 subscriptions
-            expect(context.subscriptions.length).toBe(6);
-            expect(commandMock).toHaveBeenCalledTimes(5);
+            // Extension now registers only 4 core commands + 1 config change handler = 5 subscriptions
+            expect(context.subscriptions.length).toBe(5);
+            expect(commandMock).toHaveBeenCalledTimes(4);
             expect(commandMock)
                 .toHaveBeenNthCalledWith(1, `${SETTINGS_STORE_NAME}.attach`, expect.any(Function));
             expect(commandMock)
                 .toHaveBeenNthCalledWith(2, `${SETTINGS_STORE_NAME}.launch`, expect.any(Function));
             expect(commandMock)
-                .toHaveBeenNthCalledWith(3, `${SETTINGS_VIEW_NAME}.toggleInspect`, expect.any(Function));
+                .toHaveBeenNthCalledWith(3, `${SETTINGS_VIEW_NAME}.launchHtml`, expect.any(Function));
             expect(commandMock)
-                .toHaveBeenNthCalledWith(4, `${SETTINGS_VIEW_NAME}.launchHtml`, expect.any(Function));
-            expect(commandMock)
-                .toHaveBeenNthCalledWith(5, `${SETTINGS_VIEW_NAME}.launchScreencast`, expect.any(Function));
+                .toHaveBeenNthCalledWith(4, `${SETTINGS_VIEW_NAME}.launchScreencast`, expect.any(Function));
         });
 
         it("requests targets on attach command", async () => {
@@ -112,34 +108,6 @@ describe("extension", () => {
             expect(mockUtils.getListOfTargets).toHaveBeenCalled();
         });
 
-        it("performs registered commands correctly", async () => {
-            const mockPanelShow = jest.fn();
-            jest.doMock("../src/screencastPanel", () => ({
-                ScreencastPanel: {
-                    createOrShow: mockPanelShow,
-                },
-            }));
-            jest.resetModules();
-
-            const newExtension = await import("../src/extension");
-            newExtension.activate(context);
-
-            function getCommandCallback(index: number) {
-                return { callback: commandMock.mock.calls[index][1], thisObj: commandMock.mock.instances[index] };
-            }
-
-            const refresh = getCommandCallback(4);
-            refresh.callback.call(refresh.thisObj);
-            expect(mockProviderRefresh).toHaveBeenCalled();
-
-            const attach = getCommandCallback(5);
-            attach.callback.call(attach.thisObj, { websocketUrl: "" });
-            expect(mockPanelShow).toHaveBeenCalled();
-
-            const copy = getCommandCallback(11);
-            copy.callback.call(copy.thisObj, { tooltip: "something" });
-            expect(mockClipboard).toHaveBeenCalledWith("something");
-        });
     });
 
     describe("attach", () => {
