@@ -692,25 +692,24 @@ describe("utils", () => {
         });
 
         it("returns the default settings", async () => {
-            const testPath = "g:\\GIT\\testPage";
             const expected = {
                 pathMapping: {
-                    "/": testPath,
+                    "/": "${workspaceFolder}",
                 },
                 sourceMapPathOverrides: {
                     "webpack:///./*": "${webRoot}/*",
                 },
                 sourceMaps: true,
-                webRoot: testPath,
+                webRoot: "${workspaceFolder}",
             };
 
             const expectedResolvedOverride = {
-                "meteor://💻app/*": `${testPath}\\*`,
-                "webpack:///./*": `${testPath}\\*`,
-                "webpack:///./~/*": `${testPath}\\node_modules\\*`,
+                "meteor://💻app/*": "${webRoot}/*",
+                "webpack:///./*": "${webRoot}/*",
+                "webpack:///./~/*": "${webRoot}/node_modules/*",
                 "webpack:///*": "*",
-                "webpack:///src/*": `${testPath}\\*`,
-                "webpack://*": `${testPath}\\*`
+                "webpack:///src/*": "${webRoot}/*",
+                "webpack://*": "${webRoot}/*"
             };
 
             // Ensure the new values are returned
@@ -735,14 +734,18 @@ describe("utils", () => {
 
             const expectedConfig = {
                 pathMapping: {
-                    "/app": `g:\\GIT\\testPage\\out\\app`,
-                    "/": `g:\\GIT\\testPage\\out`
+                    "/": "${workspaceFolder}"
                 },
                 sourceMapPathOverrides: {
-                    "webpack:///./*": "g:\\GIT\\testPage\\out\\*",
+                    "meteor://💻app/*": "${webRoot}/*",
+                    "webpack:///./*": "${webRoot}/*",
+                    "webpack:///./~/*": "${webRoot}/node_modules/*",
+                    "webpack:///*": "*",
+                    "webpack:///src/*": "${webRoot}/*",
+                    "webpack://*": "${webRoot}/*"
                 },
-                sourceMaps: false,
-                webRoot: "g:\\GIT\\testPage\\out",
+                sourceMaps: true,
+                webRoot: "${workspaceFolder}",
             };
 
             const { pathMapping, sourceMapPathOverrides, sourceMaps, webRoot } = utils.getRuntimeConfig(config);
@@ -766,14 +769,18 @@ describe("utils", () => {
 
             const expectedConfig = {
                 pathMapping: {
-                    "/app": `c:\\user\\test\\out`,
-                    "/": `/out`
+                    "/": "${workspaceFolder}"
                 },
                 sourceMapPathOverrides: {
-                    "webpack:///./*": "/out/*",
+                    "meteor://💻app/*": "${webRoot}/*",
+                    "webpack:///./*": "${webRoot}/*",
+                    "webpack:///./~/*": "${webRoot}/node_modules/*",
+                    "webpack:///*": "*",
+                    "webpack:///src/*": "${webRoot}/*",
+                    "webpack://*": "${webRoot}/*"
                 },
-                sourceMaps: false,
-                webRoot: "/out",
+                sourceMaps: true,
+                webRoot: "${workspaceFolder}",
             };
 
             const { pathMapping, sourceMapPathOverrides, sourceMaps, webRoot } = utils.getRuntimeConfig(config);

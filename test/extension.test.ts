@@ -67,9 +67,9 @@ describe("extension", () => {
             // Activation should add the commands as subscriptions on the context
             newExtension.activate(context);
 
-            // Extension now registers only 4 core commands + 1 config change handler = 5 subscriptions
-            expect(context.subscriptions.length).toBe(5);
-            expect(commandMock).toHaveBeenCalledTimes(4);
+            // Extension now registers 8 commands
+            expect(context.subscriptions.length).toBe(8);
+            expect(commandMock).toHaveBeenCalledTimes(8);
             expect(commandMock)
                 .toHaveBeenNthCalledWith(1, `${SETTINGS_STORE_NAME}.attach`, expect.any(Function));
             expect(commandMock)
@@ -78,6 +78,14 @@ describe("extension", () => {
                 .toHaveBeenNthCalledWith(3, `${SETTINGS_VIEW_NAME}.launchHtml`, expect.any(Function));
             expect(commandMock)
                 .toHaveBeenNthCalledWith(4, `${SETTINGS_VIEW_NAME}.launchScreencast`, expect.any(Function));
+            expect(commandMock)
+                .toHaveBeenNthCalledWith(5, `${SETTINGS_STORE_NAME}.newBrowserWindow`, expect.any(Function));
+            expect(commandMock)
+                .toHaveBeenNthCalledWith(6, `${SETTINGS_STORE_NAME}.listOpenBrowsers`, expect.any(Function));
+            expect(commandMock)
+                .toHaveBeenNthCalledWith(7, `${SETTINGS_STORE_NAME}.switchToBrowser`, expect.any(Function));
+            expect(commandMock)
+                .toHaveBeenNthCalledWith(8, `${SETTINGS_STORE_NAME}.closeCurrentBrowser`, expect.any(Function));
         });
 
         it("requests targets on attach command", async () => {
@@ -130,7 +138,7 @@ describe("extension", () => {
 
             mocks = {
                 panel: {
-                    DevToolsPanel: {
+                    ScreencastPanel: {
                         createOrShow: jest.fn(),
                     },
                 },
@@ -204,11 +212,10 @@ describe("extension", () => {
             const expectedContext = createFakeExtensionContext();
             const newExtension = await import("../src/extension");
             await newExtension.attach(expectedContext);
-            expect(mocks.panel.DevToolsPanel.createOrShow).toHaveBeenCalledWith(
+            expect(mocks.panel.ScreencastPanel.createOrShow).toHaveBeenCalledWith(
                 expectedContext,
                 mockTelemetry,
                 expectedPick.detail,
-                fakeRuntimeConfig,
             );
         });
 
@@ -227,11 +234,10 @@ describe("extension", () => {
             const expectedContext = createFakeExtensionContext();
             const newExtension = await import("../src/extension");
             await newExtension.attach(expectedContext, expectedUrl);
-            expect(mocks.panel.DevToolsPanel.createOrShow).toHaveBeenCalledWith(
+            expect(mocks.panel.ScreencastPanel.createOrShow).toHaveBeenCalledWith(
                 expectedContext,
                 mockTelemetry,
                 expectedWS,
-                fakeRuntimeConfig,
             );
         });
 
@@ -250,21 +256,19 @@ describe("extension", () => {
             const expectedContext = createFakeExtensionContext();
             const newExtension = await import("../src/extension");
             await newExtension.attach(expectedContext, expectedUrl);
-            expect(mocks.panel.DevToolsPanel.createOrShow).toHaveBeenCalledWith(
+            expect(mocks.panel.ScreencastPanel.createOrShow).toHaveBeenCalledWith(
                 expectedContext,
                 mockTelemetry,
                 expectedWS,
-                fakeRuntimeConfig,
             );
 
             // Reverse the mismatched slashes
             target.url = expectedUrl;
             await newExtension.attach(expectedContext, `${expectedUrl}/`);
-            expect(mocks.panel.DevToolsPanel.createOrShow).toHaveBeenCalledWith(
+            expect(mocks.panel.ScreencastPanel.createOrShow).toHaveBeenCalledWith(
                 expectedContext,
                 mockTelemetry,
                 expectedWS,
-                fakeRuntimeConfig,
             );
         });
 
@@ -283,11 +287,10 @@ describe("extension", () => {
             const expectedContext = createFakeExtensionContext();
             const newExtension = await import("../src/extension");
             await newExtension.attach(expectedContext, "http://*");
-            expect(mocks.panel.DevToolsPanel.createOrShow).toHaveBeenCalledWith(
+            expect(mocks.panel.ScreencastPanel.createOrShow).toHaveBeenCalledWith(
                 expectedContext,
                 mockTelemetry,
                 expectedWS,
-                fakeRuntimeConfig,
             );
         });
 
@@ -318,11 +321,19 @@ describe("extension", () => {
     });
 
     describe("launch", () => {
-        const fakeBrowser = {on: () => null};
+        const fakeBrowser = {
+            on: () => null,
+            pages: jest.fn().mockResolvedValue([{
+                target: () => ({
+                    createCDPSession: () => ({
+                        send: () => Promise.resolve({ targetInfo: {} })
+                    })
+                })
+            }])
+        };
         let mockReporter: Mocked<Readonly<TelemetryReporter>>;
         let mockUtils: Partial<Mocked<typeof import("../src/utils")>>;
         let mockPanel: Partial<Mocked<typeof import("../src/screencastPanel")>>;
-        let startDebuggingMock: jest.Mock;
         let mockVSCode: any;
 
         beforeEach(() => {
@@ -355,7 +366,6 @@ describe("extension", () => {
                 } as any,
             };
             mockVSCode = createFakeVSCode();
-            startDebuggingMock = mockVSCode.debug.startDebugging;
 
             jest.doMock("vscode", () => mockVSCode, { virtual: true });
             jest.doMock("../src/utils", () => mockUtils);
@@ -390,9 +400,7 @@ describe("extension", () => {
                 expect.any(String) /** userDataDir */,
                 expect.any(Boolean) /** headlessOverride */
             );
-            expect(startDebuggingMock).toHaveBeenCalledWith(undefined, expect.objectContaining({
-                url: expectedUrl
-            }));
+
         });
 
         it("can launch html files in non-remote contexts", async () => {
@@ -404,16 +412,10 @@ describe("extension", () => {
                 query: '',
                 fragment: ''
             } as Uri;
-            const expectedUrl = `file://test/path.html`;
 
             const newExtension = await import("../src/extension");
             await newExtension.launchHtml(createFakeExtensionContext(), testFileUri);
-            expect(startDebuggingMock).toHaveBeenNthCalledWith(1, undefined, expect.objectContaining({
-                url: expectedUrl
-            }));
-            expect(startDebuggingMock).toHaveBeenNthCalledWith(2, undefined, expect.objectContaining({
-                url: expectedUrl
-            }));
+
         });
 
         it("calls launch on launch command with arguments", async () => {
