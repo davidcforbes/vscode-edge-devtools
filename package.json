@@ -56,8 +56,7 @@
             {
                 "command": "vscode-edge-devtools.launch",
                 "title": "Launch Edge and then attach to a target",
-                "category": "Microsoft Edge Tools",
-                "icon": "$(browser)"
+                "category": "Microsoft Edge Tools"
             },
             {
                 "command": "vscode-edge-devtools-view.openSettings",
@@ -170,12 +169,6 @@
             }
         },
         "menus": {
-            "editor/title": [
-                {
-                    "command": "vscode-edge-devtools.launch",
-                    "group": "navigation"
-                }
-            ],
             "explorer/context": [
                 {
                     "when": "resourceLangId == html",

@@ -9,6 +9,11 @@
 *.vsix
 package-lock.json
 
+# Debug files (not for distribution)
+developer-console-log.txt
+*.jpg
+nul
+
 # Development directories
 .beads/
 .serena/
