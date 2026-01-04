@@ -784,16 +784,6 @@ describe("utils", () => {
         });
     });
 
-    describe("replaceWebRootInSourceMapPathOverridesEntry", () => {
-        it("replaces webRoot correctly", () => {
-            const replaceWith = "new/path";
-            expect(utils.replaceWebRootInSourceMapPathOverridesEntry(replaceWith, "${webRoot}")).toBe(replaceWith);
-            expect(utils.replaceWebRootInSourceMapPathOverridesEntry(replaceWith, "/${webRoot}")).toBe("/${webRoot}");
-            expect(utils.replaceWebRootInSourceMapPathOverridesEntry(replaceWith, "${webRoot}/path"))
-                .toBe(`${replaceWith}/path`);
-        });
-    });
-
     describe("getActiveDebugSessionId", () => {
         it("retrieves the debug session id from vscode properly", () => {
             expect(utils.getActiveDebugSessionId()).toBe('vscode-session-debug-id');

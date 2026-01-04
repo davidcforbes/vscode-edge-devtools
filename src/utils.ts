@@ -9,7 +9,6 @@ import * as os from 'os';
 import * as path from 'path';
 import * as url from 'url';
 import * as vscode from 'vscode';
-import * as debugCore from 'vscode-chrome-debug-core';
 import TelemetryReporter from '@vscode/extension-telemetry';
 import packageJson from '../package.json';
 import { DebugTelemetryReporter } from './debugTelemetryReporter';
@@ -435,77 +434,19 @@ export async function openNewTab(hostname: string, port: number, tabUrl?: string
  */
 export function getRuntimeConfig(config: Partial<IUserConfig> = {}): IRuntimeConfig {
     const settings = vscode.workspace.getConfiguration(SETTINGS_STORE_NAME);
-    const pathMapping = config.pathMapping || settings.get('pathMapping') || SETTINGS_DEFAULT_PATH_MAPPING;
     const browserFlavor = config.browserFlavor || settings.get('browserFlavor') || 'Default';
-    const sourceMapPathOverrides =
-        config.sourceMapPathOverrides || settings.get('sourceMapPathOverrides') || SETTINGS_DEFAULT_PATH_OVERRIDES;
-    const webRoot = config.webRoot || settings.get('webRoot') || SETTINGS_DEFAULT_WEB_ROOT;
-    const defaultEntrypoint = config.defaultEntrypoint || settings.get('defaultEntrypoint') || SETTINGS_DEFAULT_ENTRY_POINT;
 
-    let sourceMaps = SETTINGS_DEFAULT_SOURCE_MAPS;
-    if (typeof config.sourceMaps !== 'undefined') {
-        sourceMaps = config.sourceMaps;
-    } else {
-        const settingsSourceMaps: boolean | undefined = settings.get('sourceMaps');
-        if (typeof settingsSourceMaps !== 'undefined') {
-            sourceMaps = settingsSourceMaps;
-        }
-    }
-
-    // Resolve the paths with the webRoot set by the user
-    const resolvedOverrides: IStringDictionary<string> = {};
-    for (const pattern in sourceMapPathOverrides) {
-        if (Object.hasOwn(sourceMapPathOverrides, pattern)) {
-            const replacePattern = replaceWebRootInSourceMapPathOverridesEntry(webRoot, pattern);
-            const replacePatternValue = replaceWebRootInSourceMapPathOverridesEntry(
-                webRoot, sourceMapPathOverrides[pattern]);
-
-            resolvedOverrides[replacePattern] = replaceWorkSpaceFolderPlaceholder(replacePatternValue);
-        }
-    }
-
-    // The webRoot config is equivalent to a pathMapping entry of { '/': '${webRoot}' }.
-    if (webRoot) {
-        pathMapping['/'] = webRoot;
-    }
-
-    // replace workspaceFolder with local paths
-    const resolvedMappingOverrides: IStringDictionary<string> = {};
-    for (const customPathMapped in pathMapping) {
-        if (Object.hasOwn(pathMapping, customPathMapped)) {
-            resolvedMappingOverrides[customPathMapped] =
-                replaceWorkSpaceFolderPlaceholder(pathMapping[customPathMapped]);
-        }
-    }
-
-    const resolvedWebRoot = replaceWorkSpaceFolderPlaceholder(webRoot);
     return {
-        pathMapping: resolvedMappingOverrides,
-        sourceMapPathOverrides: resolvedOverrides,
+        pathMapping: SETTINGS_DEFAULT_PATH_MAPPING,
+        sourceMapPathOverrides: SETTINGS_DEFAULT_PATH_OVERRIDES,
         browserFlavor,
-        sourceMaps,
-        webRoot: resolvedWebRoot,
+        sourceMaps: SETTINGS_DEFAULT_SOURCE_MAPS,
+        webRoot: SETTINGS_DEFAULT_WEB_ROOT,
         isJsDebugProxiedCDPConnection: false,
         useLocalEdgeWatch: DEBUG,
         devtoolsBaseUri: DEVTOOLS_BASE_URI,
-        defaultEntrypoint: defaultEntrypoint,
+        defaultEntrypoint: SETTINGS_DEFAULT_ENTRY_POINT,
     };
-}
-
-/**
- * Find '${webRoot}' in a string and replace it with the specified value only if it is at the start.
- *
- * @param webRoot The value to use for replacement.
- * @param entry The path containing the '${webRoot}' string that we will replace.
- */
-export function replaceWebRootInSourceMapPathOverridesEntry(webRoot: string, entry: string): string {
-    if (webRoot) {
-        const webRootIndex = entry.indexOf('${webRoot}');
-        if (webRootIndex === 0) {
-            return entry.replace('${webRoot}', webRoot);
-        }
-    }
-    return entry;
 }
 
 /**
@@ -532,28 +473,6 @@ export function getBrowserArgs(): string[] {
     const settings = vscode.workspace.getConfiguration(SETTINGS_STORE_NAME);
     const browserArgs: string[] = settings.get('browserArgs') || [];
     return browserArgs.map(arg => arg.trim());
-}
-
-/**
- * Replaces the workspaceFolder placeholder in a specified path, returns the
- * given path with file disk path.
- *
- * @param customPath The path that will be replaced.
- */
-function replaceWorkSpaceFolderPlaceholder(customPath: string) {
-    let parsedPath = customPath;
-    if (vscode.workspace.workspaceFolders &&
-        vscode.workspace.workspaceFolders[0].uri.toString()) {
-        /**
-         * vscode can have several workspaceFolders, the first one is the
-         * one currently open by the user.
-         */
-        parsedPath = vscode.workspace.workspaceFolders[0].uri.toString();
-        const replacedPath = customPath.replace('${workspaceFolder}', parsedPath);
-        return debugCore.utils.canonicalizeUrl(replacedPath);
-    }
-        return parsedPath;
-
 }
 
 /**
