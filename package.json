@@ -37,7 +37,8 @@
     "main": "./out/extension",
     "sideEffects": false,
     "activationEvents": [
-        "onStartupFinished"
+        "onStartupFinished",
+        "onView:edgeBrowserActions"
     ],
     "capabilities": {
         "untrustedWorkspaces": {
@@ -52,7 +53,7 @@
                 {
                     "id": "edgeBrowserView",
                     "title": "Edge Browser",
-                    "icon": "$(browser)"
+                    "icon": "resources/viewIcon.svg"
                 }
             ]
         },
@@ -73,7 +74,8 @@
             {
                 "command": "vscode-edge-devtools.launch",
                 "title": "Launch Edge and then attach to a target",
-                "category": "Microsoft Edge Tools"
+                "category": "Microsoft Edge Tools",
+                "icon": "$(browser)"
             },
             {
                 "command": "vscode-edge-devtools-view.openSettings",
@@ -186,6 +188,12 @@
             }
         },
         "menus": {
+            "editor/title": [
+                {
+                    "command": "vscode-edge-devtools.launch",
+                    "group": "navigation"
+                }
+            ],
             "explorer/context": [
                 {
                     "when": "resourceLangId == html",
