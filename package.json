@@ -37,8 +37,7 @@
     "main": "./out/extension",
     "sideEffects": false,
     "activationEvents": [
-        "onStartupFinished",
-        "onView:edgeBrowserActions"
+        "onStartupFinished"
     ],
     "capabilities": {
         "untrustedWorkspaces": {
@@ -53,7 +52,7 @@
                 {
                     "id": "edgeBrowserView",
                     "title": "Edge Browser",
-                    "icon": "resources/viewIcon.svg"
+                    "icon": "$(browser)"
                 }
             ]
         },
