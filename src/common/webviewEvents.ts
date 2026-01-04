@@ -1,14 +1,13 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-export type WebviewEvent = 'getState' | 'getUrl' | 'openInEditor' | 'cssMirrorContent' | 'ready' | 'setState' | 'telemetry' | 'websocket'
+export type WebviewEvent = 'getState' | 'getUrl' | 'openInEditor' | 'ready' | 'setState' | 'telemetry' | 'websocket'
 | 'getVscodeSettings' | 'copyText' | 'focusEditor' | 'focusEditorGroup' | 'openUrl' | 'toggleScreencast' | 'toggleInspect' | 'replayConsoleMessages'
-| 'devtoolsConnection' | 'toggleCSSMirrorContent' | 'writeToClipboard' | 'readClipboard';
+| 'devtoolsConnection' | 'writeToClipboard' | 'readClipboard';
 export const webviewEventNames: WebviewEvent[] = [
     'getState',
     'getUrl',
     'openInEditor',
-    'cssMirrorContent',
     'ready',
     'setState',
     'telemetry',
@@ -22,24 +21,21 @@ export const webviewEventNames: WebviewEvent[] = [
     'toggleInspect',
     'replayConsoleMessages',
     'devtoolsConnection',
-    'toggleCSSMirrorContent',
     'writeToClipboard',
     'readClipboard',
 ];
 
 export type FrameToolsEvent = 'sendMessageToBackend' | 'openInNewTab' | 'recordEnumeratedHistogram' |
-'recordPerformanceHistogram' | 'reportError' | 'openInEditor' | 'cssMirrorContent' | 'toggleScreencast' | 'replayConsoleMessages' | 'toggleCSSMirrorContent';
+'recordPerformanceHistogram' | 'reportError' | 'openInEditor' | 'toggleScreencast' | 'replayConsoleMessages';
 export const FrameToolsEventNames: FrameToolsEvent[] = [
     'sendMessageToBackend',
     'openInNewTab',
     'openInEditor',
-    'cssMirrorContent',
     'recordEnumeratedHistogram',
     'recordPerformanceHistogram',
     'reportError',
     'toggleScreencast',
     'replayConsoleMessages',
-    'toggleCSSMirrorContent',
 ];
 
 export type WebSocketEvent = 'open' | 'close' | 'error' | 'message';
@@ -72,15 +68,6 @@ export interface IOpenEditorData {
     line: number;
     column: number;
     ignoreTabChanges: boolean;
-}
-
-export interface ICssMirrorContentData {
-    url: string;
-    newContent: string;
-}
-
-export interface IToggleCSSMirrorContentData {
-    isEnabled: boolean;
 }
 
 /**
