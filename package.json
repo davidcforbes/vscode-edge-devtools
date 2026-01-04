@@ -37,18 +37,7 @@
     "main": "./out/extension",
     "sideEffects": false,
     "activationEvents": [
-        "onStartupFinished",
-        "onLanguage:css",
-        "onLanguage:html",
-        "onLanguage:javascript",
-        "onLanguage:javascriptreact",
-        "onLanguage:json",
-        "onLanguage:jsonc",
-        "onLanguage:less",
-        "onLanguage:sass",
-        "onLanguage:scss",
-        "onLanguage:typescript",
-        "onLanguage:typescriptreact"
+        "onStartupFinished"
     ],
     "capabilities": {
         "untrustedWorkspaces": {
@@ -70,75 +59,9 @@
                 "category": "Microsoft Edge Tools"
             },
             {
-                "command": "vscode-edge-devtools-view.launch",
-                "category": "Microsoft Edge Tools",
-                "title": "Open a new tab",
-                "enablement": "titleCommandsRegistered",
-                "icon": {
-                    "light": "resources/light/launch.svg",
-                    "dark": "resources/dark/launch.svg"
-                }
-            },
-            {
-                "command": "vscode-edge-devtools-view.refresh",
-                "category": "Microsoft Edge Tools",
-                "title": "Refresh Targets",
-                "enablement": "titleCommandsRegistered",
-                "icon": {
-                    "light": "resources/light/refresh.svg",
-                    "dark": "resources/dark/refresh.svg"
-                }
-            },
-            {
-                "command": "vscode-edge-devtools-view.attach",
-                "category": "Microsoft Edge Tools",
-                "title": "Attach and open Microsoft Edge Tools",
-                "enablement": "viewItem != cdpTargetClosing",
-                "icon": {
-                    "light": "resources/light/attach.svg",
-                    "dark": "resources/dark/attach.svg"
-                }
-            },
-            {
-                "command": "vscode-edge-devtools-view.close-instance",
-                "category": "Microsoft Edge Tools",
-                "title": "Close instance",
-                "enablement": "viewItem != cdpTargetClosing",
-                "icon": {
-                    "light": "resources/light/close_browser_page.svg",
-                    "dark": "resources/dark/close_browser_page.svg"
-                }
-            },
-            {
-                "command": "vscode-edge-devtools-view.toggleScreencast",
-                "category": "Microsoft Edge Tools",
-                "title": "Toggle browser",
-                "enablement": "viewItem != cdpTargetClosing",
-                "icon": {
-                    "light": "resources/light/screencast.svg",
-                    "dark": "resources/dark/screencast.svg"
-                }
-            },
-            {
                 "command": "vscode-edge-devtools-view.openSettings",
                 "category": "Microsoft Edge Tools",
                 "title": "Open Settings"
-            },
-            {
-                "command": "vscode-edge-devtools-view.viewChangelog",
-                "category": "Microsoft Edge Tools",
-                "title": "View Changelog"
-            },
-            {
-                "command": "vscode-edge-devtools-view.viewDocumentation",
-                "category": "Microsoft Edge Tools",
-                "title": "View Documentation"
-            },
-            {
-                "command": "vscode-edge-devtools-view.cssMirrorContent",
-                "category": "Microsoft Edge Tools",
-                "enablement": "titleCommandsRegistered",
-                "title": "Toggle CSS mirror editing on/off"
             },
             {
                 "command": "vscode-edge-devtools-view.launchHtml",
@@ -270,34 +193,6 @@
             }
         },
         "menus": {
-            "commandPalette": [
-                {
-                    "command": "vscode-edge-devtools-view.attach",
-                    "when": "view == vscode-edge-devtools-view.targets && viewItem == cdpTarget"
-                },
-                {
-                    "command": "vscode-edge-devtools-view.launch",
-                    "when": "view == vscode-edge-devtools-view.targets"
-                },
-                {
-                    "command": "vscode-edge-devtools-view.refresh",
-                    "when": "view == vscode-edge-devtools-view.targets"
-                },
-                {
-                    "command": "vscode-edge-devtools-view.copyItem",
-                    "when": "view == vscode-edge-devtools-view.targets && viewItem == cdpTargetProperty"
-                },
-                {
-                    "command": "vscode-edge-devtools-view.openSettings",
-                    "when": "view == vscode-edge-devtools-view.targets"
-                },
-                {
-                    "command": "vscode-edge-devtools-view.viewChangelog",
-                    "when": "view == vscode-edge-devtools-view.targets"
-                }
-            ],
-            "view/title": [],
-            "view/item/context": [],
             "explorer/context": [
                 {
                     "when": "resourceLangId == html",
@@ -320,37 +215,6 @@
             {
                 "id": "devtoolsContextMenu",
                 "label": "Open with Edge"
-            }
-        ],
-        "viewsContainers": {
-            "activitybar": [
-                {
-                    "id": "vscode-edge-devtools-view",
-                    "title": "Microsoft Edge Tools",
-                    "icon": "resources/viewIcon.svg"
-                }
-            ]
-        },
-        "views": {
-            "vscode-edge-devtools-view": [
-                {
-                    "id": "vscode-edge-devtools-view.help-links",
-                    "name": "Helpful links"
-                }
-            ]
-        },
-        "viewsWelcome": [
-            {
-                "view": "vscode-edge-devtools-view.help-links",
-                "contents": "[Documentation](command:vscode-edge-devtools-view.viewDocumentation)"
-            },
-            {
-                "view": "vscode-edge-devtools-view.help-links",
-                "contents": "[Report a Bug](https://github.com/microsoft/vscode-edge-devtools/issues/new?template=bug_report.md)"
-            },
-            {
-                "view": "vscode-edge-devtools-view.help-links",
-                "contents": "[Request a Feature](https://github.com/microsoft/vscode-edge-devtools/issues/new?template=feature_request.md)"
             }
         ]
     },
