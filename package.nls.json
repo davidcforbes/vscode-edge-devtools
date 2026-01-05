@@ -1,0 +1,57 @@
+{
+  "displayName": "Browser Viewer for VS Code",
+  "description": "View and interact with web applications directly inside VS Code using Microsoft Edge. Open multiple browser instances side-by-side with device emulation support.",
+  "category.edgeTools": "Microsoft Edge Tools",
+
+  "command.attach.title": "Attach to a target",
+  "command.launch.title": "Launch Edge and then attach to a target",
+  "command.openSettings.title": "Open Settings",
+  "command.launchHtml.title": "Open Browser with DevTools",
+  "command.launchScreencast.title": "Open Browser",
+  "command.newBrowserWindow.title": "New Browser Window",
+  "command.listOpenBrowsers.title": "List Open Browsers",
+  "command.switchToBrowser.title": "Switch to Browser",
+  "command.closeCurrentBrowser.title": "Close Current Browser",
+  "command.navigateBrowser.title": "Navigate Browser to URL",
+
+  "configuration.title": "Microsoft Edge Tools",
+  "configuration.hostname.description": "The hostname on which to search for remote debuggable instances",
+  "configuration.port.description": "The port on which to search for remote debuggable instances",
+  "configuration.useHttps.description": "Should we request the remote target list using https rather than http",
+  "configuration.defaultUrl.description": "The default url to open when launching the browser without a target",
+  "configuration.userDataDir.description": "By default, Microsoft Edge is launched with a separate user profile in a temp folder. Use this option to override the path. You can also set to false to launch with your default user profile instead.",
+  "configuration.headless.description": "Launch Microsoft Edge in headless mode. (requires relaunching Visual Studio Code)",
+  "configuration.browserArgs.description": "Launch Microsoft Edge with specified args. (requires relaunching Visual Studio Code)",
+  "configuration.timeout.description": "The number of milliseconds that the Microsoft Edge Tools will keep trying to attach the browser before timing out",
+  "configuration.browserFlavor.description": "Microsoft Edge flavor to use",
+  "configuration.browserFlavor.enum.default": "Microsoft Edge Tools for VS Code will try to open the Microsoft Edge flavors in the following order: Stable, Beta, Dev and Canary",
+  "configuration.browserFlavor.enum.stable": "Microsoft Edge Tools for VS Code will use Microsoft Edge Stable version",
+  "configuration.browserFlavor.enum.beta": "Microsoft Edge Tools for VS Code will use Microsoft Edge Beta version",
+  "configuration.browserFlavor.enum.dev": "Microsoft Edge Tools for VS Code will use Microsoft Edge Dev version",
+  "configuration.browserFlavor.enum.canary": "Microsoft Edge Tools for VS Code will use Microsoft Edge Canary version",
+
+  "submenu.openWithEdge": "Open with Edge",
+
+  "capabilities.untrustedWorkspaces.description": "Workspace trust is needed to configure and debug projects",
+
+  "panel.defaultTitle": "Browser",
+  "panel.title": "Browser {0}: {1}",
+
+  "newBrowserWindow.prompt": "Enter URL to open",
+  "newBrowserWindow.placeholder": "https://example.com",
+
+  "noBrowserInstances": "No browser instances are currently open.",
+
+  "listOpenBrowsers.placeholder": "Select a browser instance to view details",
+  "switchToBrowser.placeholder": "Switch to browser instance",
+  "closeCurrentBrowser.placeholder": "Select browser instance to close",
+  "navigateBrowser.placeholder": "Select browser instance to navigate",
+  "navigateBrowser.prompt": "Enter URL to navigate to",
+  "navigateBrowser.emptyUrl": "URL cannot be empty",
+  "navigateBrowser.invalidUrl": "URL must start with http://, https://, or file://",
+
+  "launchHtml.error": "Please use this command from the context menu by right-clicking on an HTML file in the Explorer, or use \"Microsoft Edge Tools: Launch Edge and then attach to a target\" to open a browser with a URL.",
+
+  "errorReporter.checkSettings": "Check settings",
+  "errorReporter.searchIssues": "Search issues"
+}

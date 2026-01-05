@@ -1,7 +1,7 @@
 {
     "name": "vscode-edge-devtools",
-    "displayName": "Browser Viewer for VS Code",
-    "description": "View and interact with web applications directly inside VS Code using Microsoft Edge. Open multiple browser instances side-by-side with device emulation support.",
+    "displayName": "%displayName%",
+    "description": "%description%",
     "version": "3.0.0",
     "license": "SEE LICENSE IN LICENSE",
     "publisher": "ms-edgedevtools",
@@ -47,7 +47,7 @@
     "capabilities": {
         "untrustedWorkspaces": {
             "supported": "limited",
-            "description": "Workspace trust is needed to configure and debug projects"
+            "description": "%capabilities.untrustedWorkspaces.description%"
         },
         "virtualWorkspaces": false
     },
@@ -55,78 +55,78 @@
         "commands": [
             {
                 "command": "vscode-edge-devtools.attach",
-                "title": "Attach to a target",
-                "category": "Microsoft Edge Tools"
+                "title": "%command.attach.title%",
+                "category": "%category.edgeTools%"
             },
             {
                 "command": "vscode-edge-devtools.launch",
-                "title": "Launch Edge and then attach to a target",
-                "category": "Microsoft Edge Tools"
+                "title": "%command.launch.title%",
+                "category": "%category.edgeTools%"
             },
             {
                 "command": "vscode-edge-devtools-view.openSettings",
-                "category": "Microsoft Edge Tools",
-                "title": "Open Settings"
+                "category": "%category.edgeTools%",
+                "title": "%command.openSettings.title%"
             },
             {
                 "command": "vscode-edge-devtools-view.launchHtml",
-                "title": "Open Browser with DevTools",
-                "category": "Microsoft Edge Tools"
+                "title": "%command.launchHtml.title%",
+                "category": "%category.edgeTools%"
             },
             {
                 "command": "vscode-edge-devtools-view.launchScreencast",
-                "title": "Open Browser",
-                "category": "Microsoft Edge Tools"
+                "title": "%command.launchScreencast.title%",
+                "category": "%category.edgeTools%"
             },
             {
                 "command": "vscode-edge-devtools.newBrowserWindow",
-                "title": "New Browser Window",
-                "category": "Microsoft Edge Tools"
+                "title": "%command.newBrowserWindow.title%",
+                "category": "%category.edgeTools%"
             },
             {
                 "command": "vscode-edge-devtools.listOpenBrowsers",
-                "title": "List Open Browsers",
-                "category": "Microsoft Edge Tools"
+                "title": "%command.listOpenBrowsers.title%",
+                "category": "%category.edgeTools%"
             },
             {
                 "command": "vscode-edge-devtools.switchToBrowser",
-                "title": "Switch to Browser",
-                "category": "Microsoft Edge Tools"
+                "title": "%command.switchToBrowser.title%",
+                "category": "%category.edgeTools%"
             },
             {
                 "command": "vscode-edge-devtools.closeCurrentBrowser",
-                "title": "Close Current Browser",
-                "category": "Microsoft Edge Tools"
+                "title": "%command.closeCurrentBrowser.title%",
+                "category": "%category.edgeTools%"
             },
             {
                 "command": "vscode-edge-devtools.navigateBrowser",
-                "title": "Navigate Browser to URL",
-                "category": "Microsoft Edge Tools"
+                "title": "%command.navigateBrowser.title%",
+                "category": "%category.edgeTools%"
             }
         ],
         "configuration": {
-            "title": "Microsoft Edge Tools",
+            "title": "%configuration.title%",
             "type": "object",
             "properties": {
                 "vscode-edge-devtools.hostname": {
                     "type": "string",
                     "default": "localhost",
-                    "description": "The hostname on which to search for remote debuggable instances"
+                    "description": "%configuration.hostname.description%"
                 },
                 "vscode-edge-devtools.port": {
                     "type": "number",
                     "default": 9222,
-                    "description": "The port on which to search for remote debuggable instances"
+                    "description": "%configuration.port.description%"
                 },
                 "vscode-edge-devtools.useHttps": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Should we request the remote target list using https rather than http"
+                    "description": "%configuration.useHttps.description%"
                 },
                 "vscode-edge-devtools.defaultUrl": {
                     "type": "string",
                     "default": "",
-                    "description": "The default url to open when launching the browser without a target"
+                    "description": "%configuration.defaultUrl.description%"
                 },
                 "vscode-edge-devtools.userDataDir": {
                     "type": [
@@ -134,16 +134,16 @@
                         "boolean"
                     ],
                     "default": true,
-                    "description": "By default, Microsoft Edge is launched with a separate user profile in a temp folder. Use this option to override the path. You can also set to false to launch with your default user profile instead."
+                    "description": "%configuration.userDataDir.description%"
                 },
                 "vscode-edge-devtools.headless": {
                     "type": "boolean",
-                    "description": "Launch Microsoft Edge in headless mode. (requires relaunching Visual Studio Code)",
+                    "description": "%configuration.headless.description%",
                     "default": true
                 },
                 "vscode-edge-devtools.browserArgs": {
                     "type": "array",
-                    "description": "Launch Microsoft Edge with specified args. (requires relaunching Visual Studio Code)",
+                    "description": "%configuration.browserArgs.description%",
                     "items": {
                         "type": "string"
                     },
@@ -151,7 +151,7 @@
                 },
                 "vscode-edge-devtools.timeout": {
                     "type": "number",
-                    "description": "The number of milliseconds that the Microsoft Edge Tools will keep trying to attach the browser before timing out",
+                    "description": "%configuration.timeout.description%",
                     "default": 10000
                 },
                 "vscode-edge-devtools.browserFlavor": {
@@ -165,11 +165,11 @@
                         "Canary"
                     ],
                     "enumDescriptions": [
-                        "Microsoft Edge Tools for VS Code will try to open the Microsoft Edge flavors in the following order: Stable, Beta, Dev and Canary",
-                        "Microsoft Edge Tools for VS Code will use Microsoft Edge Stable version",
-                        "Microsoft Edge Tools for VS Code will use Microsoft Edge Beta version",
-                        "Microsoft Edge Tools for VS Code will use Microsoft Edge Dev version",
-                        "Microsoft Edge Tools for VS Code will use Microsoft Edge Canary version"
+                        "%configuration.browserFlavor.enum.default%",
+                        "%configuration.browserFlavor.enum.stable%",
+                        "%configuration.browserFlavor.enum.beta%",
+                        "%configuration.browserFlavor.enum.dev%",
+                        "%configuration.browserFlavor.enum.canary%"
                     ]
                 }
             }
@@ -196,7 +196,7 @@
         "submenus": [
             {
                 "id": "devtoolsContextMenu",
-                "label": "Open with Edge"
+                "label": "%submenu.openWithEdge%"
             }
         ]
     },
@@ -245,6 +245,7 @@
         "lit-html": "^3.3.1",
         "puppeteer-core": "~24.23.0",
         "utf-8-validate": "~6.0.5",
+        "vscode-nls": "^5.2.0",
         "ws": "~8.18.3"
     },
     "devDependencies": {

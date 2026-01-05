@@ -1,6 +1,10 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+import * as nls from 'vscode-nls';
+
+const localize = nls.loadMessageBundle();
+
 /**
  * Service for handling navigation events and generating panel titles
  */
@@ -30,8 +34,8 @@ export class NavigationService {
     static generatePanelTitle(currentPageUrl: string, instanceNumber: number): string {
         const friendlyName = currentPageUrl
             ? this.extractFriendlyName(currentPageUrl)
-            : 'Browser';
-        return `Browser ${instanceNumber}: ${friendlyName}`;
+            : localize('panel.defaultTitle', 'Browser');
+        return localize('panel.title', 'Browser {0}: {1}', instanceNumber, friendlyName);
     }
 
     /**

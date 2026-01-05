@@ -2,7 +2,10 @@
 // Licensed under the MIT License.
 
 import * as vscode from 'vscode';
+import * as nls from 'vscode-nls';
 import TelemetryReporter from '@vscode/extension-telemetry';
+
+const localize = nls.loadMessageBundle();
 import { ScreencastPanel } from './screencastPanel';
 import { BrowserSessionManager } from './services/browserSessionManager';
 import {
@@ -40,9 +43,9 @@ const browserSessionManager = new BrowserSessionManager();
 
 async function newBrowserWindow(context: vscode.ExtensionContext): Promise<void> {
     const url = await vscode.window.showInputBox({
-        prompt: 'Enter URL to open',
+        prompt: localize('newBrowserWindow.prompt', 'Enter URL to open'),
         value: 'about:blank',
-        placeHolder: 'https://example.com'
+        placeHolder: localize('newBrowserWindow.placeholder', 'https://example.com')
     });
 
     if (url) {
@@ -54,7 +57,7 @@ async function listOpenBrowsers(_context: vscode.ExtensionContext): Promise<void
     const instances = ScreencastPanel.getAllInstances();
 
     if (instances.size === 0) {
-        void vscode.window.showInformationMessage('No browser instances are currently open.');
+        void vscode.window.showInformationMessage(localize('noBrowserInstances', 'No browser instances are currently open.'));
         return;
     }
 
@@ -66,7 +69,7 @@ async function listOpenBrowsers(_context: vscode.ExtensionContext): Promise<void
     }));
 
     const selection = await vscode.window.showQuickPick(items, {
-        placeHolder: 'Select a browser instance to view details'
+        placeHolder: localize('listOpenBrowsers.placeholder', 'Select a browser instance to view details')
     });
 
     if (selection) {
@@ -81,7 +84,7 @@ async function switchToBrowser(_context: vscode.ExtensionContext): Promise<void>
     const instances = ScreencastPanel.getAllInstances();
 
     if (instances.size === 0) {
-        void vscode.window.showInformationMessage('No browser instances are currently open.');
+        void vscode.window.showInformationMessage(localize('noBrowserInstances', 'No browser instances are currently open.'));
         return;
     }
 
@@ -92,7 +95,7 @@ async function switchToBrowser(_context: vscode.ExtensionContext): Promise<void>
     }));
 
     const selection = await vscode.window.showQuickPick(items, {
-        placeHolder: 'Switch to browser instance'
+        placeHolder: localize('switchToBrowser.placeholder', 'Switch to browser instance')
     });
 
     if (selection) {
@@ -107,7 +110,7 @@ async function navigateBrowser(_context: vscode.ExtensionContext): Promise<void>
     const instances = ScreencastPanel.getAllInstances();
 
     if (instances.size === 0) {
-        void vscode.window.showInformationMessage('No browser instances are currently open.');
+        void vscode.window.showInformationMessage(localize('noBrowserInstances', 'No browser instances are currently open.'));
         return;
     }
 
@@ -125,7 +128,7 @@ async function navigateBrowser(_context: vscode.ExtensionContext): Promise<void>
         }));
 
         const selection = await vscode.window.showQuickPick(items, {
-            placeHolder: 'Select browser instance to navigate'
+            placeHolder: localize('navigateBrowser.placeholder', 'Select browser instance to navigate')
         });
 
         if (selection) {
@@ -139,15 +142,15 @@ async function navigateBrowser(_context: vscode.ExtensionContext): Promise<void>
 
     // Prompt for URL
     const url = await vscode.window.showInputBox({
-        prompt: 'Enter URL to navigate to',
-        placeHolder: 'https://example.com',
+        prompt: localize('navigateBrowser.prompt', 'Enter URL to navigate to'),
+        placeHolder: localize('newBrowserWindow.placeholder', 'https://example.com'),
         validateInput: (value: string) => {
             if (!value) {
-                return 'URL cannot be empty';
+                return localize('navigateBrowser.emptyUrl', 'URL cannot be empty');
             }
             // Basic URL validation
             if (!value.startsWith('http://') && !value.startsWith('https://') && !value.startsWith('file://')) {
-                return 'URL must start with http://, https://, or file://';
+                return localize('navigateBrowser.invalidUrl', 'URL must start with http://, https://, or file://');
             }
             return null;
         }
@@ -164,7 +167,7 @@ async function closeCurrentBrowser(): Promise<void> {
     const instances = ScreencastPanel.getAllInstances();
 
     if (instances.size === 0) {
-        void vscode.window.showInformationMessage('No browser instances are currently open.');
+        void vscode.window.showInformationMessage(localize('noBrowserInstances', 'No browser instances are currently open.'));
         return;
     }
 
@@ -183,7 +186,7 @@ async function closeCurrentBrowser(): Promise<void> {
     }));
 
     const selection = await vscode.window.showQuickPick(items, {
-        placeHolder: 'Select browser instance to close'
+        placeHolder: localize('closeCurrentBrowser.placeholder', 'Select browser instance to close')
     });
 
     if (selection) {
@@ -291,7 +294,7 @@ export async function launchHtml(context: vscode.ExtensionContext, fileUri: vsco
     // Validate that fileUri is provided
     if (!fileUri) {
         void vscode.window.showErrorMessage(
-            'Please use this command from the context menu by right-clicking on an HTML file in the Explorer, or use "Microsoft Edge Tools: Launch Edge and then attach to a target" to open a browser with a URL.'
+            localize('launchHtml.error', 'Please use this command from the context menu by right-clicking on an HTML file in the Explorer, or use "Microsoft Edge Tools: Launch Edge and then attach to a target" to open a browser with a URL.')
         );
         return;
     }
@@ -332,7 +335,7 @@ export async function launchScreencast(context: vscode.ExtensionContext, fileUri
     // Validate that fileUri is provided
     if (!fileUri) {
         void vscode.window.showErrorMessage(
-            'Please use this command from the context menu by right-clicking on an HTML file in the Explorer, or use "Microsoft Edge Tools: Launch Edge and then attach to a target" to open a browser with a URL.'
+            localize('launchHtml.error', 'Please use this command from the context menu by right-clicking on an HTML file in the Explorer, or use "Microsoft Edge Tools: Launch Edge and then attach to a target" to open a browser with a URL.')
         );
         return;
     }
