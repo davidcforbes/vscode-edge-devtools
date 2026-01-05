@@ -310,12 +310,13 @@ export async function launchHtml(context: vscode.ExtensionContext, fileUri: vsco
     const browserPath = await getBrowserPath();
     // Use port 0 to let the OS assign a random available port for each browser instance
     const browser = await launchBrowser(browserPath, 0, url, userDataDir, /** headless */ false);
-    browserInstances.set(url, browser);
+    const wsEndpoint = browser.wsEndpoint();
+    browserInstances.set(wsEndpoint, browser);
 
     // Clean up map entry when browser disconnects
     browser.on('disconnected', () => {
         console.warn(`[New Browser Window] Browser for ${url} disconnected, removing from map`);
-        browserInstances.delete(url);
+        browserInstances.delete(wsEndpoint);
     });
 
     // Get the websocket URL directly from the launched browser
@@ -350,12 +351,13 @@ export async function launchScreencast(context: vscode.ExtensionContext, fileUri
     const browserPath = await getBrowserPath();
     // Use port 0 to let the OS assign a random available port for each browser instance
     const browser = await launchBrowser(browserPath, 0, url, userDataDir, /** headless */ true);
-    browserInstances.set(url, browser);
+    const wsEndpoint = browser.wsEndpoint();
+    browserInstances.set(wsEndpoint, browser);
 
     // Clean up map entry when browser disconnects
     browser.on('disconnected', () => {
         console.warn(`[New Headless Window] Browser for ${url} disconnected, removing from map`);
-        browserInstances.delete(url);
+        browserInstances.delete(wsEndpoint);
     });
 
     // Get the websocket URL directly from the launched browser
@@ -627,7 +629,8 @@ export async function launch(context: vscode.ExtensionContext, launchUrl?: strin
 
         // Use port 0 to let the OS assign a random available port
         const browser = await launchBrowser(browserPath, 0, url, userDataDir);
-        browserInstances.set(url, browser);
+        const browserWsEndpoint = browser.wsEndpoint();
+        browserInstances.set(browserWsEndpoint, browser);
 
         if (url !== SETTINGS_DEFAULT_URL) {
             reportUrlType(url, telemetryReporter);
@@ -640,7 +643,6 @@ export async function launch(context: vscode.ExtensionContext, launchUrl?: strin
 
         // Get the websocket URL directly from the launched browser
         // Get the browser's WebSocket endpoint to extract the port
-        const browserWsEndpoint = browser.wsEndpoint();
         console.warn(`[Edge Launch] Browser WebSocket endpoint: ${browserWsEndpoint}`);
 
         // Extract port from ws://localhost:PORT/devtools/browser/...
@@ -660,13 +662,13 @@ export async function launch(context: vscode.ExtensionContext, launchUrl?: strin
                     console.warn(`[Edge Launch] Shared browser disconnected, clearing shared instance and map entry`);
                     sharedBrowserInstance = null;
                     sharedBrowserPort = null;
-                    browserInstances.delete(url);
+                    browserInstances.delete(browserWsEndpoint);
                 });
             } else {
                 // This browser is not the shared instance, clean up map entry only
                 browser.on('disconnected', () => {
                     console.warn(`[Launch Browser] Browser for ${url} disconnected, removing from map`);
-                    browserInstances.delete(url);
+                    browserInstances.delete(browserWsEndpoint);
                 });
             }
 
