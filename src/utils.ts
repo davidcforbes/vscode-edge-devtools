@@ -218,6 +218,62 @@ export function fixRemoteWebSocket(
 }
 
 /**
+ * Retry an async function with interval delays until success or timeout.
+ * Replacement for deprecated vscode-chrome-debug-core.utils.retryAsync.
+ */
+export async function retryAsync<T>(
+    fn: () => Promise<T>,
+    timeoutMs: number,
+    intervalDelayMs: number
+): Promise<T> {
+    const startTime = Date.now();
+    let lastError: unknown;
+
+    while (Date.now() - startTime < timeoutMs) {
+        try {
+            return await fn();
+        } catch (error) {
+            lastError = error;
+            // Wait before retrying
+            await new Promise(resolve => setTimeout(resolve, intervalDelayMs));
+        }
+    }
+
+    // Timeout exceeded, throw last error
+    throw lastError || new Error('retryAsync timed out');
+}
+
+/**
+ * Match CDP targets based on URL pattern.
+ * Replacement for deprecated vscode-chrome-debug-core.chromeUtils.getMatchingTargets.
+ */
+export function getMatchingTargets(
+    targets: IRemoteTargetJson[],
+    targetUrl: string
+): IRemoteTargetJson[] {
+    // Simple URL matching - find targets whose URL contains the target string
+    // or whose title matches
+    const lowerTargetUrl = targetUrl.toLowerCase();
+
+    return targets.filter(target => {
+        const url = (target.url || '').toLowerCase();
+        const title = (target.title || '').toLowerCase();
+
+        // Match if URL contains the target string
+        if (url.includes(lowerTargetUrl)) {
+            return true;
+        }
+
+        // Match if title contains the target string
+        if (title.includes(lowerTargetUrl)) {
+            return true;
+        }
+
+        return false;
+    });
+}
+
+/**
  * Query the list endpoint and return the parsed Json result which is the list of targets
  *
  * @param hostname The remote hostname

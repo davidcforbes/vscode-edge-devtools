@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 import * as vscode from 'vscode';
-import * as debugCore from 'vscode-chrome-debug-core';
 import TelemetryReporter from '@vscode/extension-telemetry';
 import { ScreencastPanel } from './screencastPanel';
 import {
@@ -13,11 +12,13 @@ import {
     fixRemoteWebSocket,
     getBrowserPath,
     getListOfTargets,
+    getMatchingTargets,
     getRemoteEndpointSettings,
     IRemoteTargetJson,
     IUserConfig,
     launchBrowser,
     openNewTab,
+    retryAsync,
     SETTINGS_DEFAULT_ATTACH_INTERVAL,
     SETTINGS_DEFAULT_URL,
     SETTINGS_STORE_NAME,
@@ -372,10 +373,10 @@ export async function attach(
         try {
             // Keep trying to attach to the list endpoint until timeout
             console.warn(`[Edge Attach] Calling getListOfTargets for ${hostname}:${port}...`);
-            responseArray = await debugCore.utils.retryAsync(
+            responseArray = await retryAsync(
                 () => getListOfTargets(hostname, port, useHttps),
                 timeout,
-                /* intervalDelay=*/ SETTINGS_DEFAULT_ATTACH_INTERVAL) as IRemoteTargetJson[];
+                /* intervalDelay=*/ SETTINGS_DEFAULT_ATTACH_INTERVAL);
             console.warn(`[Edge Attach] Got ${responseArray.length} targets`);
         } catch (e) {
             console.error(`[Edge Attach] Exception while getting targets:`, e);
@@ -391,9 +392,9 @@ export async function attach(
             if (attachUrl) {
                 console.warn(`[Edge Attach] Trying to match target with URL: ${attachUrl}`);
                 // Match the targets using the edge debug adapter logic
-                let matchedTargets: debugCore.chromeConnection.ITarget[] | undefined;
+                let matchedTargets: IRemoteTargetJson[] | undefined;
                 try {
-                    matchedTargets = debugCore.chromeUtils.getMatchingTargets(responseArray as unknown as debugCore.chromeConnection.ITarget[], attachUrl);
+                    matchedTargets = getMatchingTargets(responseArray, attachUrl);
                     console.warn(`[Edge Attach] getMatchingTargets returned ${matchedTargets?.length || 0} matches`);
                 } catch (e) {
                     console.error(`[Edge Attach] Error in getMatchingTargets:`, e);
