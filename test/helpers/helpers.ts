@@ -210,11 +210,13 @@ export function createFakeGet(getResponse: () => string, getStatusCode: () => nu
             statusCode: getStatusCode(),
         };
         callback(resp);
-        return {
+        const request = {
             on: jest.fn(),
             setTimeout: jest.fn(),
             destroy: jest.fn(),
         };
+        request.on.mockReturnValue(request);
+        return request;
     };
 
     return { get: fakeGet, on: getOnMock };

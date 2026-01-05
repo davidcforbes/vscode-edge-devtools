@@ -134,16 +134,17 @@ describe("utils", () => {
 
             // Setup the get mock so that we store the on("error") callback
             const httpGetMock = mockGetHttp;
+            const request = {
+                on: jest.fn(),
+                setTimeout: jest.fn(),
+                destroy: jest.fn(),
+            };
             const mockOnReturn = jest.fn((_name, callback) => {
                 onErrorCallback = callback;
+                return request;
             });
-            httpGetMock.mockImplementationOnce((_options: object, _callback: (resp: object) => void) => {
-                return {
-                    on: mockOnReturn,
-                    setTimeout: jest.fn(),
-                    destroy: jest.fn(),
-                };
-            });
+            request.on.mockImplementation(mockOnReturn);
+            httpGetMock.mockImplementation((_options: object, _callback: (resp: object) => void) => request);
 
             // Call the fetchUri api and handle the rejection so that debugging won't stop on an
             // unhandled exception
