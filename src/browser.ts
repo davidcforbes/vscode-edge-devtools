@@ -115,7 +115,8 @@ export function getBrowserArgs(): string[] {
     const browserArgs: string[] = settings.get('browserArgs') || [];
 
     const sanitized: string[] = [];
-    const blocked: string[] = [];
+    const blockedDangerous: string[] = [];
+    const blockedUnknown: string[] = [];
 
     for (const arg of browserArgs) {
         const trimmed = arg.trim();
@@ -128,7 +129,7 @@ export function getBrowserArgs(): string[] {
 
         // Check if it's a dangerous flag
         if (DANGEROUS_FLAGS.has(flagName) || flagName.startsWith('--disable-')) {
-            blocked.push(flagName);
+            blockedDangerous.push(flagName);
             console.warn(`[Security] Blocked dangerous browser flag: ${flagName}`);
             continue;
         }
@@ -137,19 +138,26 @@ export function getBrowserArgs(): string[] {
         if (SAFE_BROWSER_FLAGS.has(flagName)) {
             sanitized.push(trimmed);
         } else {
-            // Unknown flag - log warning but don't block (conservative approach)
-            console.warn(`[Security] Unknown browser flag (not on allowlist): ${flagName}. Allowing but consider reviewing.`);
-            // For now, allow unknown flags that aren't explicitly dangerous
-            // This prevents breaking existing configurations while still blocking known-bad flags
-            sanitized.push(trimmed);
+            // Unknown flag - block for security (strict allowlist)
+            blockedUnknown.push(flagName);
+            console.warn(`[Security] Blocked unknown browser flag (not on allowlist): ${flagName}`);
         }
     }
 
-    // Show user-visible warning if dangerous flags were blocked
-    if (blocked.length > 0) {
+    // Show user-visible warning if any flags were blocked
+    const allBlocked = [...blockedDangerous, ...blockedUnknown];
+    if (allBlocked.length > 0) {
+        const dangerousMsg = blockedDangerous.length > 0
+            ? `${blockedDangerous.length} dangerous flag(s): ${blockedDangerous.join(', ')}`
+            : '';
+        const unknownMsg = blockedUnknown.length > 0
+            ? `${blockedUnknown.length} unknown flag(s): ${blockedUnknown.join(', ')}`
+            : '';
+        const separator = dangerousMsg && unknownMsg ? '; ' : '';
+
         void vscode.window.showWarningMessage(
-            `Blocked ${blocked.length} dangerous browser flag(s) for security: ${blocked.join(', ')}. ` +
-            'These flags can compromise browser security. See extension documentation for allowed flags.'
+            `Blocked browser flags for security: ${dangerousMsg}${separator}${unknownMsg}. ` +
+            'Only flags on the safe allowlist are permitted. See extension documentation for allowed flags.'
         );
     }
 
