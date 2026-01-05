@@ -764,4 +764,70 @@ describe('PanelSocket', () => {
             });
         });
     });
+
+    describe('Connection Error Handling', () => {
+        it('should emit connectionError event when WebSocket errors', () => {
+            const socket = new PanelSocket(targetUrl, mockPostMessage);
+            const connectionErrorSpy = jest.fn();
+            socket.on('connectionError', connectionErrorSpy);
+
+            socket.onMessageFromWebview('ready:');
+            if (mockWebSocket.onopen) {
+                mockWebSocket.onopen();
+            }
+
+            // Trigger WebSocket error
+            if (mockWebSocket.onerror) {
+                mockWebSocket.onerror();
+            }
+
+            expect(connectionErrorSpy).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    context: 'websocket-connection',
+                    error: 'WebSocket connection error',
+                    targetUrl
+                })
+            );
+        });
+
+        it('should emit connectionError event when WebSocket closes unexpectedly', () => {
+            const socket = new PanelSocket(targetUrl, mockPostMessage);
+            const connectionErrorSpy = jest.fn();
+            socket.on('connectionError', connectionErrorSpy);
+
+            socket.onMessageFromWebview('ready:');
+            if (mockWebSocket.onopen) {
+                mockWebSocket.onopen();
+            }
+
+            // Trigger WebSocket close
+            if (mockWebSocket.onclose) {
+                mockWebSocket.onclose();
+            }
+
+            expect(connectionErrorSpy).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    context: 'websocket-close',
+                    error: 'WebSocket connection closed unexpectedly',
+                    targetUrl
+                })
+            );
+        });
+
+        it('should not emit connectionError before connection is established', () => {
+            const socket = new PanelSocket(targetUrl, mockPostMessage);
+            const connectionErrorSpy = jest.fn();
+            socket.on('connectionError', connectionErrorSpy);
+
+            socket.onMessageFromWebview('ready:');
+
+            // Trigger error before onopen
+            if (mockWebSocket.onerror) {
+                mockWebSocket.onerror();
+            }
+
+            // Should not emit error since connection was never established
+            expect(connectionErrorSpy).not.toHaveBeenCalled();
+        });
+    });
 });

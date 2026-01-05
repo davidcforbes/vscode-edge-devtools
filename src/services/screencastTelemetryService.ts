@@ -16,7 +16,10 @@ export class ScreencastTelemetryService {
     private readonly telemetryReporter: TelemetryReporter;
     private lastParseErrorTime = 0;
     private parseErrorNotificationShown = false;
+    private lastConnectionErrorTime = 0;
+    private connectionErrorNotificationShown = false;
     private static readonly PARSE_ERROR_THROTTLE_MS = 60000; // 1 minute
+    private static readonly CONNECTION_ERROR_THROTTLE_MS = 60000; // 1 minute
 
     constructor(telemetryReporter: TelemetryReporter) {
         this.telemetryReporter = telemetryReporter;
@@ -100,6 +103,42 @@ export class ScreencastTelemetryService {
             }
         } catch (reportError) {
             console.error('[ScreencastTelemetryService] Failed to report parse error:', reportError);
+        }
+    }
+
+    /**
+     * Handle and report connection errors (with rate limiting and user notification)
+     */
+    handleConnectionError(errorData: unknown): void {
+        // Rate limit connection error reporting to avoid spam
+        const now = Date.now();
+        if (now - this.lastConnectionErrorTime < ScreencastTelemetryService.CONNECTION_ERROR_THROTTLE_MS) {
+            return; // Skip this error - too soon after last report
+        }
+        this.lastConnectionErrorTime = now;
+
+        try {
+            const error = errorData as { context: string; error: string; targetUrl: string };
+
+            // Report to telemetry
+            this.telemetryReporter.sendTelemetryErrorEvent('devtools/connectionError', {
+                'context': error.context || 'unknown',
+                'error': error.error || 'unknown',
+                'targetUrl': error.targetUrl || 'unavailable'
+            });
+
+            // Show user notification (only first occurrence per session to avoid annoyance)
+            if (!this.connectionErrorNotificationShown) {
+                this.connectionErrorNotificationShown = true;
+                void vscode.window.showWarningMessage(
+                    `Browser preview lost connection to the browser. The connection may have been interrupted.`,
+                    'Dismiss'
+                ).then(() => {
+                    // User dismissed notification
+                });
+            }
+        } catch (reportError) {
+            console.error('[ScreencastTelemetryService] Failed to report connection error:', reportError);
         }
     }
 }

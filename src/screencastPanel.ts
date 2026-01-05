@@ -57,6 +57,7 @@ export class ScreencastPanel {
         this.panelSocket.on('readClipboard', () => this.onGetClipboardText());
         this.panelSocket.on('navigation', (message: string) => this.onNavigation(message));
         this.panelSocket.on('parseError', (errorData: unknown) => this.onParseError(errorData));
+        this.panelSocket.on('connectionError', (errorData: unknown) => this.onConnectionError(errorData));
 
         // Handle closing
         this.panel.onDidDispose(() => {
@@ -207,6 +208,10 @@ export class ScreencastPanel {
 
     private onParseError(errorData: unknown): void {
         this.screencastTelemetryService.handleParseError(errorData);
+    }
+
+    private onConnectionError(errorData: unknown): void {
+        this.screencastTelemetryService.handleConnectionError(errorData);
     }
 
     private updatePanelTitle(): void {

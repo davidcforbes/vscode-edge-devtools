@@ -270,6 +270,13 @@ export class PanelSocket extends EventEmitter {
         if (this.isConnected) {
             // Tell the devtools that there was a connection error
             this.postMessageToDevTools('error');
+
+            // Emit connection error event for telemetry/user notification
+            this.emit('connectionError', {
+                context: 'websocket-connection',
+                error: 'WebSocket connection error',
+                targetUrl: this.targetUrl
+            });
         }
     }
 
@@ -280,6 +287,13 @@ export class PanelSocket extends EventEmitter {
             // Tell the devtools that the real websocket was closed
             this.postMessageToDevTools('close');
             this.emit('close');
+
+            // Emit connection error for unexpected closure
+            this.emit('connectionError', {
+                context: 'websocket-close',
+                error: 'WebSocket connection closed unexpectedly',
+                targetUrl: this.targetUrl
+            });
         }
 
         this.isConnected = false;
