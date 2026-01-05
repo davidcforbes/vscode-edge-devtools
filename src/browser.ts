@@ -73,8 +73,10 @@ const DANGEROUS_FLAGS = new Set([
     '--no-sandbox',
     '--disable-web-security',
     '--disable-site-isolation-trials',
+    '--disable-site-per-process',  // Disables process isolation (critical security feature)
     '--allow-file-access-from-files',
     '--disable-features',
+    '--disable-blink-features',     // Can disable security features
     '--load-extension',
     '--disable-gpu-sandbox',
     '--disable-setuid-sandbox',
@@ -85,6 +87,8 @@ const DANGEROUS_FLAGS = new Set([
     '--disable-background-networking',
     '--disable-sync',
     '--allow-insecure-localhost',
+    '--enable-automation',          // Can bypass bot detection and security checks
+    '--remote-debugging-address',   // Could bind to public IP instead of localhost
 ]);
 
 /**
@@ -225,6 +229,34 @@ export async function launchBrowser(browserPath: string, port: number, targetUrl
 
     const browserInstance = await puppeteer.launch({executablePath: browserPath, args, headless});
     return browserInstance;
+}
+
+/**
+ * Launch browser with timeout protection to prevent indefinite hangs.
+ *
+ * @param browserPath The path of the browser to launch
+ * @param port The port on which to enable remote debugging
+ * @param targetUrl The url of the page to open
+ * @param userDataDir The user data directory for the launched instance
+ * @param forceHeadless This force overrides the --headless arg for browser launch
+ * @param timeoutMs Timeout in milliseconds (default: 30000)
+ * @returns Promise that resolves to Browser instance or rejects on timeout
+ * @throws Error if browser launch times out or fails
+ */
+export async function launchBrowserWithTimeout(
+    browserPath: string,
+    port: number,
+    targetUrl: string,
+    userDataDir?: string,
+    forceHeadless?: boolean,
+    timeoutMs: number = 30000
+): Promise<Browser> {
+    return Promise.race([
+        launchBrowser(browserPath, port, targetUrl, userDataDir, forceHeadless),
+        new Promise<Browser>((_, reject) =>
+            setTimeout(() => reject(new Error(`Browser launch timed out after ${timeoutMs}ms. This may indicate browser installation issues or resource constraints.`)), timeoutMs)
+        )
+    ]);
 }
 
 /**

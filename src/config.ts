@@ -6,6 +6,8 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import type { BrowserFlavor } from './browser';
+import { validateCDPHostname, getHostnameType } from './common/hostnameValidation';
+import { validateUserDataDir } from './common/pathValidation';
 
 export interface IStringDictionary<T> {
     [name: string]: T;
@@ -108,6 +110,17 @@ export async function getRemoteEndpointSettings(config: Partial<IUserConfig> = {
     console.warn(`[getRemoteEndpointSettings] Input config:`, config);
     console.warn(`[getRemoteEndpointSettings] config.useHttps = ${config.useHttps}, settings.get('useHttps') = ${settings.get('useHttps')}, SETTINGS_DEFAULT_USE_HTTPS = ${SETTINGS_DEFAULT_USE_HTTPS}`);
     const hostname: string = config.hostname || settings.get('hostname') || SETTINGS_DEFAULT_HOSTNAME;
+
+    // Validate CDP hostname for security (SSRF prevention)
+    const hostnameApproved = await validateCDPHostname(hostname);
+    if (!hostnameApproved) {
+        throw new Error(`CDP connection to remote hostname "${hostname}" was rejected by user for security reasons.`);
+    }
+
+    // Log hostname type for telemetry/audit
+    const hostnameType = getHostnameType(hostname);
+    console.log(`[CDP Security] Connecting to ${hostnameType} CDP endpoint: ${hostname}`);
+
     const port: number = config.port ?? settings.get('port') ?? SETTINGS_DEFAULT_PORT;
     const useHttps: boolean = config.useHttps ?? settings.get('useHttps') ?? SETTINGS_DEFAULT_USE_HTTPS;
     console.warn(`[getRemoteEndpointSettings] Result: hostname=${hostname}, port=${port}, useHttps=${useHttps}`);
@@ -126,6 +139,23 @@ export async function getRemoteEndpointSettings(config: Partial<IUserConfig> = {
         const settingsUserDataDir: string | boolean | undefined = settings.get('userDataDir');
         if (typeof settingsUserDataDir !== 'undefined') {
             userDataDir = settingsUserDataDir;
+        }
+    }
+
+    // Validate userDataDir path for security (path traversal prevention)
+    if (typeof userDataDir === 'string' && userDataDir !== '') {
+        const validation = validateUserDataDir(userDataDir);
+        if (!validation.valid) {
+            console.warn(`[Path Security] Invalid userDataDir "${userDataDir}": ${validation.error}`);
+            void vscode.window.showWarningMessage(
+                `Invalid userDataDir setting: ${validation.error}. Using default temp directory instead.`
+            );
+            // Fall back to auto-generated temp directory
+            userDataDir = true;
+        } else if (validation.normalized) {
+            // Use normalized path
+            userDataDir = validation.normalized;
+            console.log(`[Path Security] Using validated userDataDir: ${userDataDir}`);
         }
     }
 

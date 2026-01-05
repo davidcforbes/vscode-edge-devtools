@@ -354,6 +354,22 @@ export class Screencast {
     private onUrlKeyDown(event: KeyboardEvent): void {
         let url = this.urlInput.value;
         if (event.key === 'Enter' && url) {
+            // Block dangerous URL schemes
+            const normalizedUrl = url.trim().toLowerCase();
+            const dangerousSchemes = ['javascript:', 'data:', 'vbscript:'];
+
+            // Allow about:blank specifically
+            if (normalizedUrl !== 'about:blank') {
+                for (const scheme of dangerousSchemes) {
+                    if (normalizedUrl.startsWith(scheme)) {
+                        // Show error and reset URL input
+                        console.error(`Security: URL scheme "${scheme}" is not allowed`);
+                        this.urlInput.value = '';
+                        return;
+                    }
+                }
+            }
+
             if (url.startsWith('/') || url[1] === ':') {
                 try {
                     url = new URL(`file://${url}`).href;

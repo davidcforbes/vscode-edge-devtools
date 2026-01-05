@@ -8,6 +8,7 @@ import TelemetryReporter from '@vscode/extension-telemetry';
 const localize = nls.loadMessageBundle();
 import { ScreencastPanel } from './screencastPanel';
 import { BrowserSessionManager } from './services/browserSessionManager';
+import { validateUrlScheme } from './common/urlValidation';
 import {
     type Browser,
     type Target,
@@ -20,7 +21,7 @@ import {
     getRemoteEndpointSettings,
     IRemoteTargetJson,
     IUserConfig,
-    launchBrowser,
+    launchBrowserWithTimeout,
     retryAsync,
     SETTINGS_DEFAULT_ATTACH_INTERVAL,
     SETTINGS_DEFAULT_URL,
@@ -57,7 +58,8 @@ async function listOpenBrowsers(_context: vscode.ExtensionContext): Promise<void
     const instances = ScreencastPanel.getAllInstances();
 
     if (instances.size === 0) {
-        void vscode.window.showInformationMessage(localize('noBrowserInstances', 'No browser instances are currently open.'));
+        vscode.window.showInformationMessage(localize('noBrowserInstances', 'No browser instances are currently open.'))
+            .then(undefined, err => console.error('[listOpenBrowsers] Failed to show message:', err));
         return;
     }
 
@@ -84,7 +86,8 @@ async function switchToBrowser(_context: vscode.ExtensionContext): Promise<void>
     const instances = ScreencastPanel.getAllInstances();
 
     if (instances.size === 0) {
-        void vscode.window.showInformationMessage(localize('noBrowserInstances', 'No browser instances are currently open.'));
+        vscode.window.showInformationMessage(localize('noBrowserInstances', 'No browser instances are currently open.'))
+            .then(undefined, err => console.error('[switchToBrowser] Failed to show message:', err));
         return;
     }
 
@@ -110,7 +113,8 @@ async function navigateBrowser(_context: vscode.ExtensionContext): Promise<void>
     const instances = ScreencastPanel.getAllInstances();
 
     if (instances.size === 0) {
-        void vscode.window.showInformationMessage(localize('noBrowserInstances', 'No browser instances are currently open.'));
+        vscode.window.showInformationMessage(localize('noBrowserInstances', 'No browser instances are currently open.'))
+            .then(undefined, err => console.error('[navigateBrowser] Failed to show message:', err));
         return;
     }
 
@@ -145,14 +149,8 @@ async function navigateBrowser(_context: vscode.ExtensionContext): Promise<void>
         prompt: localize('navigateBrowser.prompt', 'Enter URL to navigate to'),
         placeHolder: localize('newBrowserWindow.placeholder', 'https://example.com'),
         validateInput: (value: string) => {
-            if (!value) {
-                return localize('navigateBrowser.emptyUrl', 'URL cannot be empty');
-            }
-            // Basic URL validation
-            if (!value.startsWith('http://') && !value.startsWith('https://') && !value.startsWith('file://')) {
-                return localize('navigateBrowser.invalidUrl', 'URL must start with http://, https://, or file://');
-            }
-            return null;
+            // Use shared URL validation to block dangerous schemes
+            return validateUrlScheme(value);
         }
     });
 
@@ -167,7 +165,8 @@ async function closeCurrentBrowser(): Promise<void> {
     const instances = ScreencastPanel.getAllInstances();
 
     if (instances.size === 0) {
-        void vscode.window.showInformationMessage(localize('noBrowserInstances', 'No browser instances are currently open.'));
+        vscode.window.showInformationMessage(localize('noBrowserInstances', 'No browser instances are currently open.'))
+            .then(undefined, err => console.error('[closeCurrentBrowser] Failed to show message:', err));
         return;
     }
 
@@ -230,23 +229,38 @@ export function activate(context: vscode.ExtensionContext): void {
         if (session) {
             // Clean up any browserInstances map entries pointing to the shared browser
             // Do this before closing to avoid race with disconnected event
+            // Collect URLs first to avoid modifying Map while iterating
+            const urlsToDelete: string[] = [];
             for (const [url, browser] of browserInstances.entries()) {
                 if (browser === session.browser) {
-                    browserInstances.delete(url);
-                    console.warn(`[Extension] Removed shared browser map entry for ${url}`);
+                    urlsToDelete.push(url);
                 }
+            }
+            // Delete after iteration to avoid race condition
+            for (const url of urlsToDelete) {
+                browserInstances.delete(url);
+                console.warn(`[Extension] Removed shared browser map entry for ${url}`);
             }
         }
 
-        void browserSessionManager.closeSharedBrowser();
+        browserSessionManager.closeSharedBrowser().catch(err => {
+            console.error('[Extension] Failed to close shared browser:', err);
+            void vscode.window.showErrorMessage(`Failed to close browser: ${err.message || err}`);
+        });
     });
 
     context.subscriptions.push(vscode.commands.registerCommand(`${SETTINGS_STORE_NAME}.attach`, (): void => {
-        void attach(context);
+        attach(context).catch(err => {
+            console.error('[Command] attach failed:', err);
+            void vscode.window.showErrorMessage(`Failed to attach to browser: ${err.message || err}`);
+        });
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand(`${SETTINGS_STORE_NAME}.launch`, (opts: {launchUrl: string} = {launchUrl: ''}): void => {
-        void launch(context, opts.launchUrl);
+        launch(context, opts.launchUrl).catch(err => {
+            console.error('[Command] launch failed:', err);
+            void vscode.window.showErrorMessage(`Failed to launch browser: ${err.message || err}`);
+        });
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand(`${SETTINGS_VIEW_NAME}.launchHtml`, async (fileUri: vscode.Uri): Promise<void> => {
@@ -261,29 +275,46 @@ export function activate(context: vscode.ExtensionContext): void {
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand(`${SETTINGS_STORE_NAME}.newBrowserWindow`, (): void => {
-        void newBrowserWindow(context);
+        newBrowserWindow(context).catch(err => {
+            console.error('[Command] newBrowserWindow failed:', err);
+            void vscode.window.showErrorMessage(`Failed to open new browser window: ${err.message || err}`);
+        });
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand(`${SETTINGS_STORE_NAME}.listOpenBrowsers`, (): void => {
-        void listOpenBrowsers(context);
+        listOpenBrowsers(context).catch(err => {
+            console.error('[Command] listOpenBrowsers failed:', err);
+            void vscode.window.showErrorMessage(`Failed to list browser windows: ${err.message || err}`);
+        });
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand(`${SETTINGS_STORE_NAME}.switchToBrowser`, (): void => {
-        void switchToBrowser(context);
+        switchToBrowser(context).catch(err => {
+            console.error('[Command] switchToBrowser failed:', err);
+            void vscode.window.showErrorMessage(`Failed to switch browser window: ${err.message || err}`);
+        });
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand(`${SETTINGS_STORE_NAME}.closeCurrentBrowser`, (): void => {
-        void closeCurrentBrowser();
+        closeCurrentBrowser().catch(err => {
+            console.error('[Command] closeCurrentBrowser failed:', err);
+            void vscode.window.showErrorMessage(`Failed to close browser window: ${err.message || err}`);
+        });
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand(`${SETTINGS_STORE_NAME}.navigateBrowser`, (): void => {
-        void navigateBrowser(context);
+        navigateBrowser(context).catch(err => {
+            console.error('[Command] navigateBrowser failed:', err);
+            void vscode.window.showErrorMessage(`Failed to navigate browser: ${err.message || err}`);
+        });
     }));
 
     // Defer heavy telemetry operations to avoid blocking activation
     // This prevents "extension failed to activate" on large workspaces
     setTimeout(() => {
-        void reportFileExtensionTypes(telemetryReporter);
+        reportFileExtensionTypes(telemetryReporter).catch(err => {
+            console.error('[Telemetry] reportFileExtensionTypes failed:', err);
+        });
     }, 1000);
 
     reportExtensionSettings(telemetryReporter);
@@ -306,14 +337,17 @@ export async function launchHtml(context: vscode.ExtensionContext, fileUri: vsco
     const { userDataDir } = await getRemoteEndpointSettings();
     const browserPath = await getBrowserPath();
     // Use port 0 to let the OS assign a random available port for each browser instance
-    const browser = await launchBrowser(browserPath, 0, url, userDataDir, /** headless */ false);
+    const browser = await launchBrowserWithTimeout(browserPath, 0, url, userDataDir, /** headless */ false);
     const wsEndpoint = browser.wsEndpoint();
     browserInstances.set(wsEndpoint, browser);
 
     // Clean up map entry when browser disconnects
     browser.on('disconnected', () => {
-        console.warn(`[New Browser Window] Browser for ${url} disconnected, removing from map`);
-        browserInstances.delete(wsEndpoint);
+        // Defensive check to ensure idempotent cleanup
+        if (browserInstances.has(wsEndpoint)) {
+            browserInstances.delete(wsEndpoint);
+            console.warn(`[New Browser Window] Browser for ${url} disconnected, removed from map`);
+        }
     });
 
     // Get the websocket URL directly from the launched browser
@@ -326,7 +360,15 @@ export async function launchHtml(context: vscode.ExtensionContext, fileUri: vsco
             const actualPort = parseInt(portMatch[1], 10);
             // Now use the actual port to get the target
             // IMPORTANT: CDP endpoint always uses HTTP, never HTTPS
-            await attach(context, url, {port: actualPort, useHttps: false}, false);
+            try {
+                await attach(context, url, {port: actualPort, useHttps: false}, false);
+            } catch (error) {
+                // If attach fails, clean up the browser to prevent resource leak
+                console.error('[New Browser Window] Attach failed, closing browser:', error);
+                browserInstances.delete(wsEndpoint);
+                await browser.close();
+                throw error; // Re-throw to surface error to user
+            }
         }
     }
 }
@@ -347,14 +389,17 @@ export async function launchScreencast(context: vscode.ExtensionContext, fileUri
     const { userDataDir } = await getRemoteEndpointSettings();
     const browserPath = await getBrowserPath();
     // Use port 0 to let the OS assign a random available port for each browser instance
-    const browser = await launchBrowser(browserPath, 0, url, userDataDir, /** headless */ true);
+    const browser = await launchBrowserWithTimeout(browserPath, 0, url, userDataDir, /** headless */ true);
     const wsEndpoint = browser.wsEndpoint();
     browserInstances.set(wsEndpoint, browser);
 
     // Clean up map entry when browser disconnects
     browser.on('disconnected', () => {
-        console.warn(`[New Headless Window] Browser for ${url} disconnected, removing from map`);
-        browserInstances.delete(wsEndpoint);
+        // Defensive check to ensure idempotent cleanup
+        if (browserInstances.has(wsEndpoint)) {
+            browserInstances.delete(wsEndpoint);
+            console.warn(`[New Headless Window] Browser for ${url} disconnected, removed from map`);
+        }
     });
 
     // Get the websocket URL directly from the launched browser
@@ -367,13 +412,26 @@ export async function launchScreencast(context: vscode.ExtensionContext, fileUri
             const actualPort = parseInt(portMatch[1], 10);
             // Now use the actual port to get the target
             // IMPORTANT: CDP endpoint always uses HTTP, never HTTPS
-            await attach(context, url, {port: actualPort, useHttps: false}, true);
+            try {
+                await attach(context, url, {port: actualPort, useHttps: false}, true);
+            } catch (error) {
+                // If attach fails, clean up the browser to prevent resource leak
+                console.error('[New Headless Window] Attach failed, closing browser:', error);
+                browserInstances.delete(wsEndpoint);
+                await browser.close();
+                throw error; // Re-throw to surface error to user
+            }
         }
     }
 }
 
 export function deactivate(): void {
     console.warn('[Extension] Deactivating extension, cleaning up browser instances...');
+
+    // Clear callbacks to prevent memory leaks on extension reload
+    ScreencastPanel.setInstanceCountChangedCallback(undefined);
+    ScreencastPanel.setLastPanelClosedCallback(undefined);
+    console.warn('[Extension] Cleared ScreencastPanel callbacks');
 
     // Close all browser instances tracked in the map
     const browsers = Array.from(browserInstances.values());
@@ -390,7 +448,9 @@ export function deactivate(): void {
     console.warn(`[Extension] Closed ${browsers.length} browser instance(s) from browserInstances map`);
 
     // Close shared browser instance if it exists
-    void browserSessionManager.closeSharedBrowser();
+    browserSessionManager.closeSharedBrowser().catch(err => {
+        console.error('[Extension] Failed to close shared browser during deactivation:', err);
+    });
 
     // Dispose all ScreencastPanel instances to clean up WebSocket connections
     const panels = Array.from(ScreencastPanel.getAllInstances().values());
@@ -604,7 +664,7 @@ export async function launch(context: vscode.ExtensionContext, launchUrl?: strin
             telemetryReporter.sendTelemetryEvent('command/launch/browser', browserProps);
 
         // Use port 0 to let the OS assign a random available port
-        const browser = await launchBrowser(browserPath, 0, url, userDataDir);
+        const browser = await launchBrowserWithTimeout(browserPath, 0, url, userDataDir);
         const browserWsEndpoint = browser.wsEndpoint();
         browserInstances.set(browserWsEndpoint, browser);
 
@@ -634,14 +694,20 @@ export async function launch(context: vscode.ExtensionContext, launchUrl?: strin
 
                 // Clean up map entry when browser disconnects (session manager handles its own cleanup)
                 browser.on('disconnected', () => {
-                    console.warn(`[Edge Launch] Shared browser disconnected, removing from map`);
-                    browserInstances.delete(browserWsEndpoint);
+                    // Defensive check to ensure idempotent cleanup
+                    if (browserInstances.has(browserWsEndpoint)) {
+                        browserInstances.delete(browserWsEndpoint);
+                        console.warn(`[Edge Launch] Shared browser disconnected, removed from map`);
+                    }
                 });
             } else {
                 // This browser is not the shared instance, clean up map entry only
                 browser.on('disconnected', () => {
-                    console.warn(`[Launch Browser] Browser for ${url} disconnected, removing from map`);
-                    browserInstances.delete(browserWsEndpoint);
+                    // Defensive check to ensure idempotent cleanup
+                    if (browserInstances.has(browserWsEndpoint)) {
+                        browserInstances.delete(browserWsEndpoint);
+                        console.warn(`[Launch Browser] Browser for ${url} disconnected, removed from map`);
+                    }
                 });
             }
 
@@ -655,7 +721,15 @@ export async function launch(context: vscode.ExtensionContext, launchUrl?: strin
             // IMPORTANT: CDP endpoint always uses HTTP, never HTTPS, even if the target URL is HTTPS
             const attachConfig = {...config, port: actualPort, useHttps: false};
             console.warn(`[Edge Launch] Calling attach with port ${actualPort}, config:`, attachConfig);
-            await attach(context, url, attachConfig, true);
+            try {
+                await attach(context, url, attachConfig, true);
+            } catch (error) {
+                // If attach fails, clean up the browser to prevent resource leak
+                console.error('[Edge Launch] Attach failed, closing browser:', error);
+                browserInstances.delete(browserWsEndpoint);
+                await browser.close();
+                throw error; // Re-throw to surface error to user
+            }
         } else {
             console.error(`[Edge Launch] Failed to extract port from WebSocket endpoint: ${browserWsEndpoint}`);
             void vscode.window.showErrorMessage(

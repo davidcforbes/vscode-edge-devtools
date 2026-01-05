@@ -5,6 +5,7 @@ import { EventEmitter } from 'events';
 import WebSocket from 'ws';
 import { parseMessageFromChannel, WebSocketEvent, WebviewEvent } from './common/webviewEvents';
 import { validateWebsocketPayload } from './common/messageValidation';
+import { validateUrlScheme } from './common/urlValidation';
 
 export type IDevToolsPostMessageCallback = (e: WebSocketEvent, message?: string) => void;
 
@@ -64,6 +65,11 @@ function isCDPCommandAllowed(message: string): boolean {
             return isRuntimeEvaluateAllowed(command);
         }
 
+        // Additional validation for Page.navigate to block dangerous URL schemes
+        if (command.method === 'Page.navigate') {
+            return isPageNavigateAllowed(command);
+        }
+
         return true;
     } catch (error) {
         console.error('[PanelSocket] Failed to parse CDP command for validation:', error);
@@ -94,6 +100,29 @@ function isRuntimeEvaluateAllowed(command: CDPCommand): boolean {
 
     console.warn(`[PanelSocket] Blocked Runtime.evaluate with unauthorized expression: ${expression.substring(0, 100)}`);
     return false;
+}
+
+/**
+ * Validates Page.navigate URLs to block dangerous schemes that could execute code.
+ * Prevents compromised webview from navigating to javascript:, data:, or vbscript: URLs.
+ */
+function isPageNavigateAllowed(command: CDPCommand): boolean {
+    const params = command.params as { url?: string } | undefined;
+    const url = params?.url;
+
+    if (!url || typeof url !== 'string') {
+        console.warn('[PanelSocket] Page.navigate missing url parameter');
+        return false;
+    }
+
+    // Use shared URL validation
+    const validationError = validateUrlScheme(url);
+    if (validationError !== null) {
+        console.warn(`[PanelSocket] Blocked Page.navigate with dangerous URL: ${url.substring(0, 100)} - ${validationError}`);
+        return false;
+    }
+
+    return true;
 }
 
 export class PanelSocket extends EventEmitter {

@@ -133,11 +133,11 @@ export class ScreencastPanel {
         return ScreencastPanel.instances;
     }
 
-    static setInstanceCountChangedCallback(callback: () => void): void {
+    static setInstanceCountChangedCallback(callback: (() => void) | undefined): void {
         ScreencastPanel.onInstanceCountChanged = callback;
     }
 
-    static setLastPanelClosedCallback(callback: () => void): void {
+    static setLastPanelClosedCallback(callback: (() => void) | undefined): void {
         ScreencastPanel.onLastPanelClosed = callback;
     }
 
@@ -191,11 +191,16 @@ export class ScreencastPanel {
     }
 
     private onSaveToClipboard(message: string): void {
-        void ClipboardService.writeToClipboard(message);
+        ClipboardService.writeToClipboard(message).catch(err => {
+            console.error('[ScreencastPanel] Failed to write to clipboard:', err);
+        });
     }
 
     private onGetClipboardText(): void {
-        void ClipboardService.readFromClipboard(msg => this.panel.webview.postMessage(msg) as unknown as void);
+        ClipboardService.readFromClipboard(msg => this.panel.webview.postMessage(msg) as unknown as void)
+            .catch(err => {
+                console.error('[ScreencastPanel] Failed to read from clipboard:', err);
+            });
     }
 
     private onNavigation(message: string): void {

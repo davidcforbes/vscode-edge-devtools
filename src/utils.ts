@@ -22,6 +22,7 @@ export {
     getBrowserArgs,
     getBrowserPath,
     launchBrowser,
+    launchBrowserWithTimeout,
 } from './browser';
 
 // Re-export network module
