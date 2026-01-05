@@ -10,6 +10,42 @@ import { SETTINGS_STORE_NAME } from './config';
 type ExtensionSettings = [string, boolean | string | {[key: string]: string} | undefined];
 
 /**
+ * Settings that are safe to send to telemetry without redaction.
+ * Excludes settings that may contain sensitive data like file paths, URLs, or custom arguments.
+ */
+const TELEMETRY_SAFE_SETTINGS = new Set([
+    'hostname',      // Usually localhost or IP (acceptable for telemetry)
+    'port',          // Port number (safe)
+    'useHttps',      // Boolean flag (safe)
+    'headless',      // Boolean flag (safe)
+    'timeout',       // Numeric timeout value (safe)
+    'browserFlavor'  // Enum value: Default/Stable/Beta/Dev/Canary (safe)
+]);
+
+/**
+ * Redacts sensitive setting values to prevent leaking personal information via telemetry.
+ * Only settings in TELEMETRY_SAFE_SETTINGS allowlist are sent with actual values.
+ *
+ * @param settingName The name of the setting (without the extension prefix)
+ * @param settingValue The setting value to potentially redact
+ * @returns The original value if safe, otherwise "<redacted>"
+ */
+function scrubSettingValue(settingName: string, settingValue: boolean | string | {[key: string]: string} | undefined): string {
+    if (settingValue === undefined) {
+        return 'undefined';
+    }
+
+    // Check if this setting is on the safe list
+    if (TELEMETRY_SAFE_SETTINGS.has(settingName)) {
+        // Safe setting - send actual value
+        return typeof settingValue !== 'object' ? settingValue.toString() : JSON.stringify(settingValue);
+    }
+
+    // Sensitive setting (userDataDir, browserArgs, defaultUrl, etc.) - redact the value
+    return '<redacted>';
+}
+
+/**
  * Create a telemetry reporter that can be used for this extension
  *
  * @param context The vscode context
@@ -38,13 +74,12 @@ export function reportExtensionSettings(telemetryReporter: Readonly<TelemetryRep
                 if (defaultValue && typeof defaultValue === 'object' && typeof settingValue === 'object') {
                     for (const [key, value] of Object.entries(defaultValue)) {
                         if (settingValue[key] !== value) {
-                            changedSettingsMap.set(settingName, JSON.stringify(settingValue));
+                            changedSettingsMap.set(settingName, scrubSettingValue(settingName, settingValue));
                             break;
                         }
                     }
                 } else {
-                    // eslint-disable-next-line @typescript-eslint/no-base-to-string
-                    changedSettingsMap.set(settingName, settingValue.toString());
+                    changedSettingsMap.set(settingName, scrubSettingValue(settingName, settingValue));
                 }
             }
         }
@@ -63,8 +98,7 @@ export function reportChangedExtensionSetting(event: vscode.ConfigurationChangeE
             if (settingName !== undefined) {
                 if (settingValue !== undefined) {
                     const telemetryObject: {[key: string]: string}  = {};
-                    const objString = typeof settingValue !== 'object' ? settingValue.toString() : JSON.stringify(settingValue);
-                    telemetryObject[settingName] = objString;
+                    telemetryObject[settingName] = scrubSettingValue(settingName, settingValue);
                     telemetryReporter.sendTelemetryEvent('user/settingsChanged', telemetryObject);
                 }
             }

@@ -866,4 +866,118 @@ describe("utils", () => {
             expect(reporter.sendTelemetryEvent).toHaveBeenCalledWith('user/settingsChanged', { isHeadless: 'false' });
         });
     });
+
+    describe('Telemetry Redaction', () => {
+        it('should send actual values for safe settings (headless, port, browserFlavor)', () => {
+            const vscodeMock = jest.requireMock("vscode");
+            const originalWorkspaceMockConfig = vscodeMock.workspace.getConfiguration();
+
+            // Mock safe settings with actual values
+            vscodeMock.workspace.getConfiguration.mockImplementation(() => {
+                return {
+                    ...originalWorkspaceMockConfig,
+                    headless: false,
+                    port: 9223,
+                    browserFlavor: 'Dev',
+                };
+            });
+
+            jest.doMock("vscode", () => vscodeMock, { virtual: true });
+            jest.resetModules();
+
+            const reporter = createFakeTelemetryReporter();
+            utils.reportExtensionSettings(reporter);
+
+            // Verify safe settings send actual values
+            const calls = (reporter.sendTelemetryEvent as jest.Mock).mock.calls;
+            const settingsCall = calls.find(call => call[0] === 'user/settingsChangedAtLaunch');
+
+            if (settingsCall) {
+                const settingsData = settingsCall[1];
+                // These should have actual values (if changed from default)
+                if (settingsData.headless !== undefined) {
+                    expect(settingsData.headless).not.toBe('<redacted>');
+                }
+                if (settingsData.port !== undefined) {
+                    expect(settingsData.port).not.toBe('<redacted>');
+                }
+                if (settingsData.browserFlavor !== undefined) {
+                    expect(settingsData.browserFlavor).not.toBe('<redacted>');
+                }
+            }
+        });
+
+        it('should redact sensitive settings (userDataDir, browserArgs, defaultUrl)', () => {
+            const vscodeMock = jest.requireMock("vscode");
+            const originalWorkspaceMockConfig = vscodeMock.workspace.getConfiguration();
+
+            // Mock sensitive settings with values that should be redacted
+            vscodeMock.workspace.getConfiguration.mockImplementation(() => {
+                return {
+                    ...originalWorkspaceMockConfig,
+                    userDataDir: '/home/user/.config/edge',
+                    browserArgs: ['--enable-features=SomeFeature', '--api-key=secret123'],
+                    defaultUrl: 'https://internal.company.com/app?token=abc123',
+                };
+            });
+
+            jest.doMock("vscode", () => vscodeMock, { virtual: true });
+            jest.resetModules();
+
+            const reporter = createFakeTelemetryReporter();
+            utils.reportExtensionSettings(reporter);
+
+            // Verify sensitive settings are redacted
+            const calls = (reporter.sendTelemetryEvent as jest.Mock).mock.calls;
+            const settingsCall = calls.find(call => call[0] === 'user/settingsChangedAtLaunch');
+
+            if (settingsCall) {
+                const settingsData = settingsCall[1];
+                // These should be redacted
+                if (settingsData.userDataDir !== undefined) {
+                    expect(settingsData.userDataDir).toBe('<redacted>');
+                }
+                if (settingsData.browserArgs !== undefined) {
+                    expect(settingsData.browserArgs).toBe('<redacted>');
+                }
+                if (settingsData.defaultUrl !== undefined) {
+                    expect(settingsData.defaultUrl).toBe('<redacted>');
+                }
+            }
+        });
+
+        it('should redact sensitive settings in reportChangedExtensionSetting', () => {
+            const vscodeMock = jest.requireMock("vscode");
+            const originalWorkspaceMockConfig = vscodeMock.workspace.getConfiguration();
+
+            // Mock changed sensitive setting
+            vscodeMock.workspace.getConfiguration.mockImplementation(() => {
+                return {
+                    ...originalWorkspaceMockConfig,
+                    userDataDir: '/sensitive/path/to/user/data',
+                };
+            });
+
+            jest.doMock("vscode", () => vscodeMock, { virtual: true });
+            jest.resetModules();
+
+            const reporter = createFakeTelemetryReporter();
+            const configurationChangedEvent: ConfigurationChangeEvent = {
+                affectsConfiguration: (name): boolean => {
+                    return name === 'vscode-edge-devtools.userDataDir';
+                }
+            };
+
+            utils.reportChangedExtensionSetting(configurationChangedEvent, reporter);
+
+            // Verify userDataDir is redacted
+            const calls = (reporter.sendTelemetryEvent as jest.Mock).mock.calls;
+            const settingsCall = calls.find(call => call[0] === 'user/settingsChanged');
+
+            if (settingsCall) {
+                const settingsData = settingsCall[1];
+                expect(settingsData.userDataDir).toBe('<redacted>');
+            }
+        });
+    });
 });
