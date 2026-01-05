@@ -67,25 +67,29 @@ describe("extension", () => {
             // Activation should add the commands as subscriptions on the context
             newExtension.activate(context);
 
-            // Extension now registers 8 commands
-            expect(context.subscriptions.length).toBe(8);
-            expect(commandMock).toHaveBeenCalledTimes(8);
+            // Extension registers 10 subscriptions: 1 status bar item + 9 commands
+            expect(context.subscriptions.length).toBe(10);
+            expect(commandMock).toHaveBeenCalledTimes(9);
+
+            // Check that all commands are registered (order-independent)
             expect(commandMock)
-                .toHaveBeenNthCalledWith(1, `${SETTINGS_STORE_NAME}.attach`, expect.any(Function));
+                .toHaveBeenCalledWith(`${SETTINGS_STORE_NAME}.attach`, expect.any(Function));
             expect(commandMock)
-                .toHaveBeenNthCalledWith(2, `${SETTINGS_STORE_NAME}.launch`, expect.any(Function));
+                .toHaveBeenCalledWith(`${SETTINGS_STORE_NAME}.launch`, expect.any(Function));
             expect(commandMock)
-                .toHaveBeenNthCalledWith(3, `${SETTINGS_VIEW_NAME}.launchHtml`, expect.any(Function));
+                .toHaveBeenCalledWith(`${SETTINGS_VIEW_NAME}.launchHtml`, expect.any(Function));
             expect(commandMock)
-                .toHaveBeenNthCalledWith(4, `${SETTINGS_VIEW_NAME}.launchScreencast`, expect.any(Function));
+                .toHaveBeenCalledWith(`${SETTINGS_VIEW_NAME}.launchScreencast`, expect.any(Function));
             expect(commandMock)
-                .toHaveBeenNthCalledWith(5, `${SETTINGS_STORE_NAME}.newBrowserWindow`, expect.any(Function));
+                .toHaveBeenCalledWith(`${SETTINGS_STORE_NAME}.newBrowserWindow`, expect.any(Function));
             expect(commandMock)
-                .toHaveBeenNthCalledWith(6, `${SETTINGS_STORE_NAME}.listOpenBrowsers`, expect.any(Function));
+                .toHaveBeenCalledWith(`${SETTINGS_STORE_NAME}.listOpenBrowsers`, expect.any(Function));
             expect(commandMock)
-                .toHaveBeenNthCalledWith(7, `${SETTINGS_STORE_NAME}.switchToBrowser`, expect.any(Function));
+                .toHaveBeenCalledWith(`${SETTINGS_STORE_NAME}.switchToBrowser`, expect.any(Function));
             expect(commandMock)
-                .toHaveBeenNthCalledWith(8, `${SETTINGS_STORE_NAME}.closeCurrentBrowser`, expect.any(Function));
+                .toHaveBeenCalledWith(`${SETTINGS_STORE_NAME}.closeCurrentBrowser`, expect.any(Function));
+            expect(commandMock)
+                .toHaveBeenCalledWith(`${SETTINGS_STORE_NAME}.navigateBrowser`, expect.any(Function));
         });
 
         it("requests targets on attach command", async () => {
@@ -460,7 +464,11 @@ describe("extension", () => {
             newExtension.activate(context);
 
             // Get the launch command that was added by extension activation
-            const callback = vscode.commands.registerCommand.mock.calls[1][1];
+            const launchCall = vscode.commands.registerCommand.mock.calls.find(
+                (call: unknown[]) => call[0] === `${SETTINGS_STORE_NAME}.launch`
+            );
+            expect(launchCall).toBeDefined();
+            const callback = launchCall![1];
             expect(callback).toBeDefined();
 
             const result = await callback!(context);
@@ -475,8 +483,12 @@ describe("extension", () => {
             const newExtension = await import("../src/extension");
             newExtension.activate(context);
 
-            // Get the launch command that was added by extension activation
-            const callback = vscode.commands.registerCommand.mock.calls[2][1];
+            // Get the launchHtml command that was added by extension activation
+            const launchHtmlCall = vscode.commands.registerCommand.mock.calls.find(
+                (call: unknown[]) => call[0] === `${SETTINGS_VIEW_NAME}.launchHtml`
+            );
+            expect(launchHtmlCall).toBeDefined();
+            const callback = launchHtmlCall![1];
             expect(callback).toBeDefined();
 
             const result = await callback!(context);

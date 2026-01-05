@@ -375,7 +375,7 @@ export async function launchScreencast(context: vscode.ExtensionContext, fileUri
 
 export function deactivate(): void {
     console.warn('[Extension] Deactivating extension, cleaning up browser instances...');
-    
+
     // Close all browser instances tracked in the map
     const browsers = Array.from(browserInstances.values());
     for (const browser of browsers) {
@@ -389,7 +389,7 @@ export function deactivate(): void {
     }
     browserInstances.clear();
     console.warn(`[Extension] Closed ${browsers.length} browser instance(s) from browserInstances map`);
-    
+
     // Close shared browser instance if it exists
     if (sharedBrowserInstance) {
         try {
@@ -403,7 +403,7 @@ export function deactivate(): void {
         sharedBrowserInstance = null;
         sharedBrowserPort = null;
     }
-    
+
     // Dispose all ScreencastPanel instances to clean up WebSocket connections
     const panels = Array.from(ScreencastPanel.getAllInstances().values());
     for (const panel of panels) {
@@ -414,7 +414,7 @@ export function deactivate(): void {
         }
     }
     console.warn(`[Extension] Disposed ${panels.length} panel instance(s)`);
-    
+
     console.warn('[Extension] Extension deactivation cleanup complete');
 }
 
@@ -434,19 +434,19 @@ export async function attach(
     const isRemoteSession = !!vscode.env.remoteName;
     const remoteName = vscode.env.remoteName || 'unknown';
     const isTunneledSession = remoteName === 'tunnel' || remoteName === 'codespaces';
-    
+
     if (!isLocalhost && !useHttps) {
         let warningMessage = `Connecting to remote CDP endpoint ${hostname}:${port} without encryption. `;
-        
+
         if (isRemoteSession) {
             warningMessage += `You are in a ${remoteName} session. `;
             if (isTunneledSession) {
                 warningMessage += `For tunneled/remote sessions, HTTPS is strongly recommended for security. `;
             }
         }
-        
+
         warningMessage += `Set "vscode-edge-devtools.useHttps: true" to use secure transport (wss/https).`;
-        
+
         void vscode.window.showWarningMessage(
             warningMessage,
             'Open Settings',
@@ -461,7 +461,7 @@ export async function attach(
             }
         });
     }
-    
+
     // Log remote session information for debugging
     if (isRemoteSession) {
         console.warn(`[Edge Attach] Remote session detected: ${remoteName}, hostname: ${hostname}, useHttps: ${useHttps}`);

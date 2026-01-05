@@ -59,6 +59,7 @@ export function createFakeVSCode() {
             joinPath: jest.fn().mockReturnValue({ with: jest.fn() })
         },
         ViewColumn: { One: 1, Two: 2 },
+        StatusBarAlignment: { Left: 1, Right: 2 },
         commands: {
             executeCommand: jest.fn(),
             registerCommand: jest.fn(),
@@ -90,6 +91,14 @@ export function createFakeVSCode() {
         window: {
             createOutputChannel: jest.fn().mockReturnValue({ appendLine: jest.fn(), dispose: jest.fn() }),
             createWebviewPanel: jest.fn(),
+            createStatusBarItem: jest.fn().mockReturnValue({
+                text: '',
+                command: '',
+                tooltip: '',
+                show: jest.fn(),
+                hide: jest.fn(),
+                dispose: jest.fn()
+            }),
             registerTreeDataProvider: jest.fn(),
             showErrorMessage: jest.fn(),
             showQuickPick: jest.fn().mockResolvedValue(null),
