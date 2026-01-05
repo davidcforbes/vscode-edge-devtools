@@ -103,7 +103,7 @@ describe("extension", () => {
             expect(attachCommand).toBeDefined();
 
             // Ensure that attaching will request targets
-            mockUtils.getRemoteEndpointSettings!.mockReturnValue({
+            mockUtils.getRemoteEndpointSettings!.mockResolvedValue({
                 defaultUrl: "url",
                 hostname: "localhost",
                 port: 9222,

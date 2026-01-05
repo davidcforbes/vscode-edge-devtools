@@ -306,7 +306,7 @@ export async function launchHtml(context: vscode.ExtensionContext, fileUri: vsco
         ? `file://${fileUri.fsPath}`
         : `file://${vscode.env.remoteName}.localhost/${fileUri.authority.split('+')[1]}/${fileUri.fsPath.replace(/\\/g, '/')}`;
 
-    const { userDataDir } = getRemoteEndpointSettings();
+    const { userDataDir } = await getRemoteEndpointSettings();
     const browserPath = await getBrowserPath();
     // Use port 0 to let the OS assign a random available port for each browser instance
     const browser = await launchBrowser(browserPath, 0, url, userDataDir, /** headless */ false);
@@ -346,7 +346,7 @@ export async function launchScreencast(context: vscode.ExtensionContext, fileUri
         ? `file://${fileUri.fsPath}`
         : `file://${vscode.env.remoteName}.localhost/${fileUri.authority.split('+')[1]}/${fileUri.fsPath.replace(/\\/g, '/')}`;
 
-    const { userDataDir } = getRemoteEndpointSettings();
+    const { userDataDir } = await getRemoteEndpointSettings();
     const browserPath = await getBrowserPath();
     // Use port 0 to let the OS assign a random available port for each browser instance
     const browser = await launchBrowser(browserPath, 0, url, userDataDir, /** headless */ true);
@@ -384,7 +384,7 @@ export async function attach(
     }
 
     const telemetryProps = { viaConfig: `${!!config}`, withTargetUrl: `${!!attachUrl}` };
-    const { hostname, port, useHttps, timeout } = getRemoteEndpointSettings(config);
+    const { hostname, port, useHttps, timeout } = await getRemoteEndpointSettings(config);
 
     console.warn(`[Edge Attach] Starting attach - hostname: ${hostname}, port: ${port}, useHttps: ${useHttps}, attachUrl: ${attachUrl}, timeout: ${timeout}ms`);
 
@@ -514,7 +514,7 @@ export async function launch(context: vscode.ExtensionContext, launchUrl?: strin
     const telemetryProps = { viaConfig: `${!!config}`, browserType, isHeadless};
     telemetryReporter.sendTelemetryEvent('command/launch', telemetryProps);
 
-    const { hostname, defaultUrl, userDataDir } = getRemoteEndpointSettings(config);
+    const { hostname, defaultUrl, userDataDir } = await getRemoteEndpointSettings(config);
     const url = launchUrl || defaultUrl;
 
     // Try to reuse existing browser instance by creating a new tab

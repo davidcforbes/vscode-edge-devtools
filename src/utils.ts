@@ -335,7 +335,7 @@ export async function getListOfTargets(hostname: string, port: number, useHttps:
  *
  * @param config The settings specified by a launch config, if any
  */
-export function getRemoteEndpointSettings(config: Partial<IUserConfig> = {}): IDevToolsSettings {
+export async function getRemoteEndpointSettings(config: Partial<IUserConfig> = {}): Promise<IDevToolsSettings> {
     const settings = vscode.workspace.getConfiguration(SETTINGS_STORE_NAME);
     console.warn(`[getRemoteEndpointSettings] Input config:`, config);
     console.warn(`[getRemoteEndpointSettings] config.useHttps = ${config.useHttps}, settings.get('useHttps') = ${settings.get('useHttps')}, SETTINGS_DEFAULT_USE_HTTPS = ${SETTINGS_DEFAULT_USE_HTTPS}`);
@@ -364,8 +364,8 @@ export function getRemoteEndpointSettings(config: Partial<IUserConfig> = {}): ID
     if (userDataDir === true || (typeof userDataDir === 'undefined' && browserPathSet === 'Default')) {
         // Generate a unique temp directory for each browser instance
         userDataDir = path.join(os.tmpdir(), `vscode-edge-devtools-userdatadir_${port}_${Date.now()}`);
-        if (!fse.pathExistsSync(userDataDir)) {
-            fse.mkdirSync(userDataDir);
+        if (!(await fse.pathExists(userDataDir))) {
+            await fse.mkdir(userDataDir);
         }
     } else if (!userDataDir) {
         // Explicit opt-out
