@@ -123,6 +123,8 @@ The extension follows a minimal architecture focused on browser preview:
 - Manages device emulation toolbar
 - Handles panel lifecycle (create, reveal, dispose)
 - Each panel tracks its own target URL and browser connection
+- Implements disposal callbacks to notify extension for browser cleanup
+- Three callback hooks: `onInstanceCountChanged`, `onLastPanelClosed`, `onPanelDisposed`
 
 **PanelSocket** (`src/panelSocket.ts`)
 - WebSocket proxy between webview and CDP
@@ -212,8 +214,39 @@ panels.set(targetUrl, panel);
 
 **Cleanup**
 - Panels auto-remove from map on disposal
-- Browser processes managed independently by puppeteer-core
+- Browser processes properly closed via onPanelDisposed callback
+- Distinguishes between shared browser (managed by BrowserSessionManager) and individual instances
+- Individual browser instances are closed immediately when their panel disposes
 - No shared state between instances
+
+**Browser Lifecycle Management** (`src/extension.ts`)
+The extension implements proper browser process cleanup to prevent memory leaks:
+
+```typescript
+// Register callback to close individual browser when its panel closes
+ScreencastPanel.setPanelDisposedCallback((targetUrl: string) => {
+    // Extract WebSocket endpoint from targetUrl
+    const wsEndpoint = targetUrl.split('/devtools/')[0];
+    const browser = browserInstances.get(wsEndpoint);
+
+    // Don't close shared browser instance
+    const sharedSession = browserSessionManager.getSharedSession();
+    if (sharedSession && browser === sharedSession.browser) {
+        return; // Shared browser managed by BrowserSessionManager
+    }
+
+    // Close individual browser instance
+    browserInstances.delete(wsEndpoint);
+    browser.close(); // Fire-and-forget async close
+});
+```
+
+**Key Points:**
+- `onPanelDisposed` fires before panel is removed from instances map
+- Allows extension to check if browser should be closed
+- Shared browsers remain active for other panels
+- Individual browsers close immediately to free memory
+- Prevents accumulation of orphaned browser processes
 
 ## CDP Integration
 
@@ -224,6 +257,29 @@ The extension connects to Microsoft Edge via the Chrome DevTools Protocol (CDP):
 - WebSocket connection for bidirectional communication
 
 **No debugging integration**: The extension does NOT integrate with VS Code's debugger or js-debug extension. It only uses CDP for browser preview and navigation.
+
+### CDP Endpoint Initialization Timing
+
+**Critical Performance Optimization** (`src/extension.ts:717-718`):
+```typescript
+// Wait for the browser's CDP endpoint to fully initialize
+// Even though puppeteer says the browser is ready, the /json/list endpoint
+// needs a moment to register page targets
+await new Promise(resolve => setTimeout(resolve, 200));
+```
+
+**Why this delay is necessary:**
+- Puppeteer's `browser.newPage()` returns before CDP endpoint is ready
+- The `/json/list` endpoint needs time to register new page targets
+- Without delay: attach() fails with "no matching targets found"
+- 200ms is optimal balance between reliability and speed
+
+**Performance progression:**
+- Original: 1000ms (overly conservative)
+- First optimization: 500ms (50% faster)
+- Current: 200ms (80% faster than original, reliable in testing)
+
+**Safety net:** The `attach()` function has robust retry logic (10s timeout, 200ms intervals) to handle edge cases where 200ms isn't sufficient.
 
 ## Extension Settings
 
@@ -410,6 +466,38 @@ The goal was to create a lightweight browser preview tool focused on viewing and
 - Use "New Browser Window" command, not "Launch Browser" repeatedly
 - Check panels map in extension.ts for instance tracking
 - Verify no errors in Output panel
+
+**Memory issues / Browser processes not closing:**
+- Run `check-memory.ps1` to diagnose Edge and VS Code memory usage
+- Verify browser processes terminate when panels close
+- Check for orphaned Edge processes: `Get-Process -Name msedge`
+- Individual browser instances should close immediately when panel disposes
+- Shared browser closes only when BrowserSessionManager disposes it
+
+### Diagnostic Tools
+
+**Memory Analysis Script** (`check-memory.ps1`):
+```powershell
+# Run this PowerShell script to analyze memory usage
+.\check-memory.ps1
+```
+
+**Output includes:**
+- Top 20 Edge browser processes by memory with CPU usage
+- Top 20 VS Code processes by memory with CPU usage
+- Total memory for each category
+- Combined total memory usage
+
+**Usage:**
+1. Run before closing panels to establish baseline
+2. Close all webview panels
+3. Run again to verify Edge processes terminated
+4. Compare totals to identify memory leaks
+
+**Expected behavior:**
+- Closing individual browser panel → Edge process terminates within 1-2 seconds
+- Closing last panel using shared browser → Shared Edge process terminates
+- Memory should drop by ~80-100 MB per browser process closed
 
 ## Contributing
 
