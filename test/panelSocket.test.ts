@@ -112,9 +112,9 @@ describe('PanelSocket', () => {
         it('should send cached messages after connection opens', () => {
             const socket = new PanelSocket(targetUrl, mockPostMessage);
 
-            // Send messages before connection opens
+            // Send messages before connection opens (using allowed commands)
             const message1 = `websocket:${JSON.stringify({ message: JSON.stringify({ id: 1, method: 'Page.enable' }) })}`;
-            const message2 = `websocket:${JSON.stringify({ message: JSON.stringify({ id: 2, method: 'Runtime.enable' }) })}`;
+            const message2 = `websocket:${JSON.stringify({ message: JSON.stringify({ id: 2, method: 'Page.reload' }) })}`;
 
             socket.onMessageFromWebview(message1);
             socket.onMessageFromWebview(message2);
@@ -127,7 +127,7 @@ describe('PanelSocket', () => {
             // Should send both cached messages
             expect(mockWebSocket.send).toHaveBeenCalledTimes(2);
             expect(mockWebSocket.send).toHaveBeenCalledWith(JSON.stringify({ id: 1, method: 'Page.enable' }));
-            expect(mockWebSocket.send).toHaveBeenCalledWith(JSON.stringify({ id: 2, method: 'Runtime.enable' }));
+            expect(mockWebSocket.send).toHaveBeenCalledWith(JSON.stringify({ id: 2, method: 'Page.reload' }));
         });
 
         it('should send messages immediately when already connected', () => {
@@ -429,6 +429,253 @@ describe('PanelSocket', () => {
             }
 
             expect(mockPostMessage).toHaveBeenCalledWith('error');
+        });
+    });
+
+    describe('CDP Allowlist', () => {
+        describe('Allowed CDP Commands', () => {
+            const allowedCommands = [
+                'Input.dispatchMouseEvent',
+                'Input.dispatchKeyEvent',
+                'Input.emulateTouchFromMouseEvent',
+                'Page.enable',
+                'Page.getNavigationHistory',
+                'Page.startScreencast',
+                'Page.navigateToHistoryEntry',
+                'Page.reload',
+                'Page.navigate',
+                'Page.screencastFrameAck',
+                'Emulation.setUserAgentOverride',
+                'Emulation.setDeviceMetricsOverride',
+                'Emulation.setTouchEmulationEnabled',
+                'Emulation.setEmulatedVisionDeficiency',
+                'Emulation.setEmulatedMedia',
+                'Emulation.setEmitTouchEventsForMouse',
+            ];
+
+            allowedCommands.forEach(method => {
+                it(`should allow ${method} command`, () => {
+                    const socket = new PanelSocket(targetUrl, mockPostMessage);
+
+                    // Connect and open
+                    socket.onMessageFromWebview('ready:');
+                    if (mockWebSocket.onopen) {
+                        mockWebSocket.onopen();
+                    }
+
+                    mockWebSocket.send.mockClear();
+
+                    const message = `websocket:${JSON.stringify({ message: JSON.stringify({ id: 1, method }) })}`;
+                    socket.onMessageFromWebview(message);
+
+                    expect(mockWebSocket.send).toHaveBeenCalledWith(JSON.stringify({ id: 1, method }));
+                });
+            });
+        });
+
+        describe('Blocked CDP Commands', () => {
+            const blockedCommands = [
+                'Debugger.enable',
+                'Debugger.setBreakpoint',
+                'Runtime.callFunctionOn',
+                'Network.setCookie',
+                'Storage.clearCookies',
+                'Target.attachToTarget',
+                'Browser.close',
+                'SystemInfo.getInfo',
+            ];
+
+            blockedCommands.forEach(method => {
+                it(`should block ${method} command`, () => {
+                    const socket = new PanelSocket(targetUrl, mockPostMessage);
+
+                    // Connect and open
+                    socket.onMessageFromWebview('ready:');
+                    if (mockWebSocket.onopen) {
+                        mockWebSocket.onopen();
+                    }
+
+                    mockWebSocket.send.mockClear();
+
+                    const message = `websocket:${JSON.stringify({ message: JSON.stringify({ id: 1, method }) })}`;
+                    socket.onMessageFromWebview(message);
+
+                    expect(mockWebSocket.send).not.toHaveBeenCalled();
+                });
+            });
+        });
+
+        describe('Runtime.evaluate Restrictions', () => {
+            it('should allow clipboard copy operation', () => {
+                const socket = new PanelSocket(targetUrl, mockPostMessage);
+
+                socket.onMessageFromWebview('ready:');
+                if (mockWebSocket.onopen) {
+                    mockWebSocket.onopen();
+                }
+
+                mockWebSocket.send.mockClear();
+
+                const expression = 'document.getSelection().toString()';
+                const command = { id: 1, method: 'Runtime.evaluate', params: { expression } };
+                const message = `websocket:${JSON.stringify({ message: JSON.stringify(command) })}`;
+
+                socket.onMessageFromWebview(message);
+
+                expect(mockWebSocket.send).toHaveBeenCalledWith(JSON.stringify(command));
+            });
+
+            it('should allow clipboard paste operation', () => {
+                const socket = new PanelSocket(targetUrl, mockPostMessage);
+
+                socket.onMessageFromWebview('ready:');
+                if (mockWebSocket.onopen) {
+                    mockWebSocket.onopen();
+                }
+
+                mockWebSocket.send.mockClear();
+
+                const expression = 'document.execCommand("insertText", false, "test content");';
+                const command = { id: 1, method: 'Runtime.evaluate', params: { expression } };
+                const message = `websocket:${JSON.stringify({ message: JSON.stringify(command) })}`;
+
+                socket.onMessageFromWebview(message);
+
+                expect(mockWebSocket.send).toHaveBeenCalledWith(JSON.stringify(command));
+            });
+
+            it('should allow clipboard paste with escaped characters', () => {
+                const socket = new PanelSocket(targetUrl, mockPostMessage);
+
+                socket.onMessageFromWebview('ready:');
+                if (mockWebSocket.onopen) {
+                    mockWebSocket.onopen();
+                }
+
+                mockWebSocket.send.mockClear();
+
+                const expression = 'document.execCommand("insertText", false, "test \\"quoted\\" content");';
+                const command = { id: 1, method: 'Runtime.evaluate', params: { expression } };
+                const message = `websocket:${JSON.stringify({ message: JSON.stringify(command) })}`;
+
+                socket.onMessageFromWebview(message);
+
+                expect(mockWebSocket.send).toHaveBeenCalledWith(JSON.stringify(command));
+            });
+
+            it('should block Runtime.evaluate without expression', () => {
+                const socket = new PanelSocket(targetUrl, mockPostMessage);
+
+                socket.onMessageFromWebview('ready:');
+                if (mockWebSocket.onopen) {
+                    mockWebSocket.onopen();
+                }
+
+                mockWebSocket.send.mockClear();
+
+                const command = { id: 1, method: 'Runtime.evaluate', params: {} };
+                const message = `websocket:${JSON.stringify({ message: JSON.stringify(command) })}`;
+
+                socket.onMessageFromWebview(message);
+
+                expect(mockWebSocket.send).not.toHaveBeenCalled();
+            });
+
+            it('should block Runtime.evaluate with arbitrary code', () => {
+                const socket = new PanelSocket(targetUrl, mockPostMessage);
+
+                socket.onMessageFromWebview('ready:');
+                if (mockWebSocket.onopen) {
+                    mockWebSocket.onopen();
+                }
+
+                mockWebSocket.send.mockClear();
+
+                const expression = 'alert("XSS attack")';
+                const command = { id: 1, method: 'Runtime.evaluate', params: { expression } };
+                const message = `websocket:${JSON.stringify({ message: JSON.stringify(command) })}`;
+
+                socket.onMessageFromWebview(message);
+
+                expect(mockWebSocket.send).not.toHaveBeenCalled();
+            });
+
+            it('should block Runtime.evaluate with malicious execCommand', () => {
+                const socket = new PanelSocket(targetUrl, mockPostMessage);
+
+                socket.onMessageFromWebview('ready:');
+                if (mockWebSocket.onopen) {
+                    mockWebSocket.onopen();
+                }
+
+                mockWebSocket.send.mockClear();
+
+                // Malicious: different command than insertText
+                const expression = 'document.execCommand("delete", false, "");';
+                const command = { id: 1, method: 'Runtime.evaluate', params: { expression } };
+                const message = `websocket:${JSON.stringify({ message: JSON.stringify(command) })}`;
+
+                socket.onMessageFromWebview(message);
+
+                expect(mockWebSocket.send).not.toHaveBeenCalled();
+            });
+
+            it('should block Runtime.evaluate with code injection attempt', () => {
+                const socket = new PanelSocket(targetUrl, mockPostMessage);
+
+                socket.onMessageFromWebview('ready:');
+                if (mockWebSocket.onopen) {
+                    mockWebSocket.onopen();
+                }
+
+                mockWebSocket.send.mockClear();
+
+                // Injection attempt: extra code after execCommand
+                const expression = 'document.execCommand("insertText", false, "test"); alert(1);';
+                const command = { id: 1, method: 'Runtime.evaluate', params: { expression } };
+                const message = `websocket:${JSON.stringify({ message: JSON.stringify(command) })}`;
+
+                socket.onMessageFromWebview(message);
+
+                expect(mockWebSocket.send).not.toHaveBeenCalled();
+            });
+        });
+
+        describe('Invalid/Malformed Messages', () => {
+            it('should block command without method field', () => {
+                const socket = new PanelSocket(targetUrl, mockPostMessage);
+
+                socket.onMessageFromWebview('ready:');
+                if (mockWebSocket.onopen) {
+                    mockWebSocket.onopen();
+                }
+
+                mockWebSocket.send.mockClear();
+
+                const command = { id: 1, params: {} };
+                const message = `websocket:${JSON.stringify({ message: JSON.stringify(command) })}`;
+
+                socket.onMessageFromWebview(message);
+
+                expect(mockWebSocket.send).not.toHaveBeenCalled();
+            });
+
+            it('should not crash on invalid CDP command JSON', () => {
+                const socket = new PanelSocket(targetUrl, mockPostMessage);
+
+                socket.onMessageFromWebview('ready:');
+                if (mockWebSocket.onopen) {
+                    mockWebSocket.onopen();
+                }
+
+                mockWebSocket.send.mockClear();
+
+                // Valid outer JSON but invalid CDP command format
+                const message = `websocket:${JSON.stringify({ message: '{not valid json}' })}`;
+
+                expect(() => socket.onMessageFromWebview(message)).not.toThrow();
+                expect(mockWebSocket.send).not.toHaveBeenCalled();
+            });
         });
     });
 });
