@@ -33,6 +33,7 @@ export class ScreencastPanel {
     private static instanceCounter = 0;
     private static onInstanceCountChanged: (() => void) | undefined;
     private static onLastPanelClosed: (() => void) | undefined;
+    private static onPanelDisposed: ((targetUrl: string) => void) | undefined;
 
     private constructor(
         panelId: string,
@@ -111,6 +112,12 @@ export class ScreencastPanel {
         }
         this.isDisposed = true;
 
+        // Notify extension before removing from instances map
+        // This allows extension to check if browser should be closed
+        if (ScreencastPanel.onPanelDisposed) {
+            ScreencastPanel.onPanelDisposed(this.targetUrl);
+        }
+
         // Remove from instances map
         ScreencastPanel.instances.delete(this.panelId);
 
@@ -139,6 +146,10 @@ export class ScreencastPanel {
 
     static setLastPanelClosedCallback(callback: (() => void) | undefined): void {
         ScreencastPanel.onLastPanelClosed = callback;
+    }
+
+    static setPanelDisposedCallback(callback: ((targetUrl: string) => void) | undefined): void {
+        ScreencastPanel.onPanelDisposed = callback;
     }
 
     reveal(): void {

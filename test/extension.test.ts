@@ -43,7 +43,7 @@ describe("extension", () => {
                 getRemoteEndpointSettings: jest.fn(),
                 getRuntimeConfig: jest.fn(),
                 launchBrowserWithTimeout: jest.fn().mockResolvedValue(mockBrowser),
-                reportFileExtensionTypes: jest.fn(),
+                reportFileExtensionTypes: jest.fn().mockResolvedValue(undefined),
                 reportChangedExtensionSetting: jest.fn(),
                 reportExtensionSettings: jest.fn(),
             };
@@ -150,6 +150,9 @@ describe("extension", () => {
                 panel: {
                     ScreencastPanel: {
                         createOrShow: jest.fn(),
+                        getAllInstances: jest.fn(() => new Map()),
+                        setInstanceCountChangedCallback: jest.fn(),
+                        setLastPanelClosedCallback: jest.fn(),
                     },
                 },
                 utils: {
@@ -158,11 +161,12 @@ describe("extension", () => {
                     getListOfTargets: jest.fn().mockResolvedValue([target]),
                     getRemoteEndpointSettings: jest.fn().mockReturnValue({
                         hostname: "hostname",
-                        port: "port",
+                        port: 9222,
                         timeout: 10000,
                         useHttps: false,
                     }),
                     getRuntimeConfig: jest.fn().mockReturnValue(fakeRuntimeConfig),
+                    retryAsync: jest.fn().mockImplementation((fn) => fn()) as any,
                 },
                 vscode: createFakeVSCode(),
             };
@@ -334,6 +338,7 @@ describe("extension", () => {
         const fakeBrowser = {
             on: jest.fn(),
             wsEndpoint: jest.fn(() => "ws://localhost:9222/devtools/browser/123"),
+            isConnected: jest.fn(() => true),
             pages: jest.fn().mockResolvedValue([{
                 target: () => ({
                     createCDPSession: () => ({
@@ -369,12 +374,15 @@ describe("extension", () => {
                 reportChangedExtensionSetting: jest.fn(),
                 reportExtensionSettings: jest.fn(),
                 reportUrlType: jest.fn(),
-                reportFileExtensionTypes: jest.fn(),
+                reportFileExtensionTypes: jest.fn().mockResolvedValue(undefined),
             };
 
             mockPanel = {
                 ScreencastPanel: {
                     createOrShow: jest.fn(),
+                    getAllInstances: jest.fn(() => new Map()),
+                    setInstanceCountChangedCallback: jest.fn(),
+                    setLastPanelClosedCallback: jest.fn(),
                 } as any,
             };
             mockVSCode = createFakeVSCode();
@@ -407,7 +415,7 @@ describe("extension", () => {
             expect(mockUtils.getBrowserPath).toHaveBeenCalled();
             expect(mockUtils.launchBrowserWithTimeout).toHaveBeenCalledWith(
                 expect.any(String) /** browserPath */,
-                expect.any(String) /** port */,
+                expect.any(Number) /** port */,
                 expectedUrl /** targetUrl */,
                 expect.any(String) /** userDataDir */,
                 expect.any(Boolean) /** headlessOverride */

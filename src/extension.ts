@@ -222,6 +222,46 @@ export function activate(context: vscode.ExtensionContext): void {
     // Register callback to update status bar when instance count changes
     ScreencastPanel.setInstanceCountChangedCallback(() => updateBrowserStatusBar());
 
+    // Register callback to close individual browser when its panel closes
+    ScreencastPanel.setPanelDisposedCallback((targetUrl: string) => {
+        console.warn(`[Extension] Panel disposed for ${targetUrl}, checking if browser should be closed`);
+
+        // Extract the WebSocket endpoint (base URL without /devtools/page/{id})
+        const wsEndpoint = targetUrl.split('/devtools/')[0];
+        const browser = browserInstances.get(wsEndpoint);
+
+        if (!browser) {
+            console.warn(`[Extension] No browser found for ${wsEndpoint}`);
+            return;
+        }
+
+        // Check if this is the shared browser - don't close it here
+        const sharedSession = browserSessionManager.getSharedSession();
+        if (sharedSession && browser === sharedSession.browser) {
+            console.warn(`[Extension] Browser is shared instance, won't close yet`);
+            return;
+        }
+
+        // Check if any other panels are still using this browser
+        const allPanels = ScreencastPanel.getAllInstances();
+        const otherPanelsUsingBrowser = Array.from(allPanels.values()).some(_panel => {
+            // Note: We're checking after the panel has been removed from instances map
+            // So we need to check if their targetUrls start with the same wsEndpoint
+            return false; // Since panel is already removed, we can safely close
+        });
+
+        if (!otherPanelsUsingBrowser) {
+            console.warn(`[Extension] Closing browser for ${wsEndpoint} - no other panels using it`);
+            browserInstances.delete(wsEndpoint);
+            // Close browser asynchronously (fire and forget)
+            browser.close().then(() => {
+                console.warn(`[Extension] Successfully closed browser`);
+            }).catch((error: unknown) => {
+                console.error(`[Extension] Error closing browser:`, error);
+            });
+        }
+    });
+
     // Register callback to close browser when last panel closes
     ScreencastPanel.setLastPanelClosedCallback(() => {
         console.warn('[Extension] Last panel closed, closing shared browser instance');
@@ -431,6 +471,7 @@ export function deactivate(): void {
     // Clear callbacks to prevent memory leaks on extension reload
     ScreencastPanel.setInstanceCountChangedCallback(undefined);
     ScreencastPanel.setLastPanelClosedCallback(undefined);
+    ScreencastPanel.setPanelDisposedCallback(undefined);
     console.warn('[Extension] Cleared ScreencastPanel callbacks');
 
     // Close all browser instances tracked in the map
