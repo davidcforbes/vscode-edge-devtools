@@ -247,7 +247,6 @@ export class ScreencastPanel {
             'Browser', // Temporary title, will be updated when navigation occurs
             column,
             {
-                enableCommandUris: true,
                 enableScripts: true,
                 retainContextWhenHidden: true,
             }

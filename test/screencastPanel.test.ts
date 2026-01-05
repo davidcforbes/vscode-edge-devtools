@@ -91,7 +91,6 @@ describe('ScreencastPanel', () => {
                 'Edge DevTools: Browser',
                 expect.any(Number), // ViewColumn.Beside
                 {
-                    enableCommandUris: true,
                     enableScripts: true,
                     retainContextWhenHidden: true,
                 }
