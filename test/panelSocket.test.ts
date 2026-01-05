@@ -161,6 +161,90 @@ describe('PanelSocket', () => {
             // Should not attempt to send
             expect(mockWebSocket.send).not.toHaveBeenCalled();
         });
+
+        it('should cap message queue at 100 messages and drop oldest', () => {
+            const socket = new PanelSocket(targetUrl, mockPostMessage);
+            const queueOverflowSpy = jest.fn();
+            socket.on('queueOverflow', queueOverflowSpy);
+
+            // Send 150 messages before connection opens
+            for (let i = 1; i <= 150; i++) {
+                const message = `websocket:${JSON.stringify({ message: JSON.stringify({ id: i, method: 'Page.enable' }) })}`;
+                socket.onMessageFromWebview(message);
+            }
+
+            // Should have emitted queueOverflow event 50 times (once for each message over 100)
+            expect(queueOverflowSpy).toHaveBeenCalledTimes(50);
+
+            // Verify event payload structure
+            expect(queueOverflowSpy).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    context: 'message-queue-cap',
+                    queueSize: expect.any(Number),
+                    maxSize: 100
+                })
+            );
+
+            // Trigger connection open
+            if (mockWebSocket.onopen) {
+                mockWebSocket.onopen();
+            }
+
+            // Should send exactly 100 messages (the last 100, messages 51-150)
+            expect(mockWebSocket.send).toHaveBeenCalledTimes(100);
+
+            // First sent message should be id: 51 (oldest message that wasn't dropped)
+            expect(mockWebSocket.send).toHaveBeenNthCalledWith(1, JSON.stringify({ id: 51, method: 'Page.enable' }));
+
+            // Last sent message should be id: 150 (newest message)
+            expect(mockWebSocket.send).toHaveBeenNthCalledWith(100, JSON.stringify({ id: 150, method: 'Page.enable' }));
+        });
+
+        it('should not drop messages when queue is under the cap', () => {
+            const socket = new PanelSocket(targetUrl, mockPostMessage);
+            const queueOverflowSpy = jest.fn();
+            socket.on('queueOverflow', queueOverflowSpy);
+
+            // Send 50 messages (under the 100 cap)
+            for (let i = 1; i <= 50; i++) {
+                const message = `websocket:${JSON.stringify({ message: JSON.stringify({ id: i, method: 'Page.enable' }) })}`;
+                socket.onMessageFromWebview(message);
+            }
+
+            // Should not emit queueOverflow
+            expect(queueOverflowSpy).not.toHaveBeenCalled();
+
+            // Trigger connection open
+            if (mockWebSocket.onopen) {
+                mockWebSocket.onopen();
+            }
+
+            // Should send all 50 messages
+            expect(mockWebSocket.send).toHaveBeenCalledTimes(50);
+        });
+
+        it('should handle exactly 100 messages without overflow', () => {
+            const socket = new PanelSocket(targetUrl, mockPostMessage);
+            const queueOverflowSpy = jest.fn();
+            socket.on('queueOverflow', queueOverflowSpy);
+
+            // Send exactly 100 messages (at the cap)
+            for (let i = 1; i <= 100; i++) {
+                const message = `websocket:${JSON.stringify({ message: JSON.stringify({ id: i, method: 'Page.enable' }) })}`;
+                socket.onMessageFromWebview(message);
+            }
+
+            // Should not emit queueOverflow
+            expect(queueOverflowSpy).not.toHaveBeenCalled();
+
+            // Trigger connection open
+            if (mockWebSocket.onopen) {
+                mockWebSocket.onopen();
+            }
+
+            // Should send all 100 messages
+            expect(mockWebSocket.send).toHaveBeenCalledTimes(100);
+        });
     });
 
     describe('Message Handling', () => {

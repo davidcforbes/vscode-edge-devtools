@@ -8,6 +8,10 @@ import { validateWebsocketPayload } from './common/messageValidation';
 
 export type IDevToolsPostMessageCallback = (e: WebSocketEvent, message?: string) => void;
 
+// Maximum number of CDP messages to queue when WebSocket is not connected
+// Prevents unbounded memory growth if connection stalls
+const MAX_QUEUED_MESSAGES = 100;
+
 // Allowlist of CDP commands that the webview is permitted to send
 // This prevents malicious webview code from sending arbitrary CDP commands
 const ALLOWED_CDP_METHODS = new Set([
@@ -158,6 +162,7 @@ export class PanelSocket extends EventEmitter {
 
             try {
                 // Parse and validate websocket message payload
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
                 const parsedArgs = JSON.parse(args);
                 const validation = validateWebsocketPayload(parsedArgs);
 
@@ -181,6 +186,20 @@ export class PanelSocket extends EventEmitter {
 
                     if (!this.isConnected) {
                         // DevTools are sending a message before the real websocket has finished opening so cache it
+                        // Enforce queue cap to prevent unbounded memory growth
+                        if (this.messages.length >= MAX_QUEUED_MESSAGES) {
+                            // Drop oldest message when queue is full
+                            const droppedMessage = this.messages.shift();
+                            console.warn(`[PanelSocket] Message queue full (${MAX_QUEUED_MESSAGES}), dropped oldest message`);
+
+                            // Emit event for telemetry tracking
+                            this.emit('queueOverflow', {
+                                context: 'message-queue-cap',
+                                queueSize: this.messages.length,
+                                maxSize: MAX_QUEUED_MESSAGES,
+                                droppedMessage: droppedMessage?.substring(0, 100) // Truncate for safety
+                            });
+                        }
                         this.messages.push(message);
                     } else {
                         // Websocket ready so send the message directly
