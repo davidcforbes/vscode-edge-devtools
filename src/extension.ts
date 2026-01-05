@@ -225,7 +225,18 @@ export function activate(context: vscode.ExtensionContext): void {
     ScreencastPanel.setLastPanelClosedCallback(() => {
         console.warn('[Extension] Last panel closed, closing shared browser instance');
         if (sharedBrowserInstance) {
-            sharedBrowserInstance.close().catch(err => {
+            const browserToClose = sharedBrowserInstance;
+            
+            // Clean up any browserInstances map entries pointing to the shared browser
+            // Do this before closing to avoid race with disconnected event
+            for (const [url, browser] of browserInstances.entries()) {
+                if (browser === browserToClose) {
+                    browserInstances.delete(url);
+                    console.warn(`[Extension] Removed shared browser map entry for ${url}`);
+                }
+            }
+            
+            browserToClose.close().catch(err => {
                 console.error('[Extension] Error closing shared browser:', err);
             });
             sharedBrowserInstance = null;
@@ -546,12 +557,6 @@ export async function launch(context: vscode.ExtensionContext, launchUrl?: strin
         const browser = await launchBrowser(browserPath, 0, url, userDataDir);
         browserInstances.set(url, browser);
 
-        // Clean up map entry when browser disconnects
-        browser.on('disconnected', () => {
-            console.warn(`[Launch Browser] Browser for ${url} disconnected, removing from map`);
-            browserInstances.delete(url);
-        });
-
         if (url !== SETTINGS_DEFAULT_URL) {
             reportUrlType(url, telemetryReporter);
         }
@@ -578,11 +583,18 @@ export async function launch(context: vscode.ExtensionContext, launchUrl?: strin
                 sharedBrowserPort = actualPort;
                 console.warn(`[Edge Launch] Saved as shared browser instance on port ${actualPort}`);
 
-                // Clean up when browser closes
+                // Clean up both shared instance and map entry when browser disconnects
                 browser.on('disconnected', () => {
-                    console.warn(`[Edge Launch] Shared browser disconnected, clearing shared instance`);
+                    console.warn(`[Edge Launch] Shared browser disconnected, clearing shared instance and map entry`);
                     sharedBrowserInstance = null;
                     sharedBrowserPort = null;
+                    browserInstances.delete(url);
+                });
+            } else {
+                // This browser is not the shared instance, clean up map entry only
+                browser.on('disconnected', () => {
+                    console.warn(`[Launch Browser] Browser for ${url} disconnected, removing from map`);
+                    browserInstances.delete(url);
                 });
             }
 
