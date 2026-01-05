@@ -13,6 +13,7 @@ export class PanelSocket extends EventEmitter {
     protected socket: WebSocket | undefined;
     private isConnected = false;
     private messages: string[] = [];
+    private commandIdCounter = 0;
 
     constructor(targetUrl: string, postMessageToDevTools: IDevToolsPostMessageCallback) {
         super();
@@ -33,8 +34,9 @@ export class PanelSocket extends EventEmitter {
             return;
         }
 
+        // Use monotonic counter instead of Date.now() to prevent ID collisions
         const command = {
-            id: Date.now(),
+            id: ++this.commandIdCounter,
             method,
             params: params || {}
         };

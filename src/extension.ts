@@ -418,37 +418,37 @@ export async function attach(
                 }
             }
 
-            if (targetWebsocketUrl) {
-                // Auto connect to found target
-                useRetry = false;
-                ScreencastPanel.createOrShow(context, telemetryReporter, targetWebsocketUrl);
-            } else if (useRetry) {
-                // Wait for a little bit until we retry
-                await new Promise<void>(resolve => {
-                    setTimeout(() => {
-                        resolve();
-                    }, SETTINGS_DEFAULT_ATTACH_INTERVAL);
-                });
-            } else {
-                // Create the list of items to show with fixed websocket addresses
-                console.warn(`[Edge Attach] Showing quick pick with ${responseArray.length} targets`);
-                const items = responseArray.map((i: IRemoteTargetJson) => {
-                    i = fixRemoteWebSocket(hostname, port, i);
-                    return {
-                        description: i.url,
-                        detail: i.webSocketDebuggerUrl,
-                        label: i.title,
-                    } as vscode.QuickPickItem;
-                });
+                if (targetWebsocketUrl) {
+                    // Auto connect to found target
+                    useRetry = false;
+                    ScreencastPanel.createOrShow(context, telemetryReporter, targetWebsocketUrl);
+                } else if (useRetry) {
+                    // Wait for a little bit until we retry
+                    await new Promise<void>(resolve => {
+                        setTimeout(() => {
+                            resolve();
+                        }, SETTINGS_DEFAULT_ATTACH_INTERVAL);
+                    });
+                } else {
+                    // Create the list of items to show with fixed websocket addresses
+                    console.warn(`[Edge Attach] Showing quick pick with ${responseArray.length} targets`);
+                    const items = responseArray.map((i: IRemoteTargetJson) => {
+                        i = fixRemoteWebSocket(hostname, port, i);
+                        return {
+                            description: i.url,
+                            detail: i.webSocketDebuggerUrl,
+                            label: i.title,
+                        } as vscode.QuickPickItem;
+                    });
 
-                // Show the target list and allow the user to select one
-                const selection = await vscode.window.showQuickPick(items);
-                console.warn(`[Edge Attach] User selection: ${selection ? selection.label : 'DISMISSED'}`);
-                if (selection && selection.detail) {
-                    console.warn(`[Edge Attach] Creating screencast panel with WebSocket: ${selection.detail}`);
-                    ScreencastPanel.createOrShow(context, telemetryReporter, selection.detail);
+                    // Show the target list and allow the user to select one
+                    const selection = await vscode.window.showQuickPick(items);
+                    console.warn(`[Edge Attach] User selection: ${selection ? selection.label : 'DISMISSED'}`);
+                    if (selection && selection.detail) {
+                        console.warn(`[Edge Attach] Creating screencast panel with WebSocket: ${selection.detail}`);
+                        ScreencastPanel.createOrShow(context, telemetryReporter, selection.detail);
+                    }
                 }
-            }
         }
     } while (useRetry && Date.now() - startTime < timeout);
 

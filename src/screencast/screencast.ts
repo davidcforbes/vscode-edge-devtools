@@ -179,6 +179,11 @@ export class Screencast {
 
         for (const eventName of Object.keys(MouseEventMap)) {
             this.screencastImage.addEventListener(eventName, event => {
+                // Guard against division by zero when emulated dimensions haven't been set yet
+                if (this.emulatedWidth === 0 || this.emulatedHeight === 0) {
+                    return;
+                }
+
                 const scale = this.screencastImage.offsetWidth / this.emulatedWidth;
                 const mouseEvent = event as MouseEvent;
                 if (this.isTouchMode && !this.inspectMode) {
@@ -412,8 +417,10 @@ export class Screencast {
     }
 
     private pasteClipboardContents(message: string) {
+        // Use JSON.stringify to properly escape all special characters (newlines, quotes, etc.)
+        // JSON.stringify returns a quoted string, so we use it directly in the expression
         this.cdpConnection.sendMessageToBackend('Runtime.evaluate', {
-            expression: `document.execCommand("insertText", false, "${message.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}");`,
+            expression: `document.execCommand("insertText", false, ${JSON.stringify(message)});`,
         });
     }
 

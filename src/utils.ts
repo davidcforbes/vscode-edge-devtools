@@ -444,7 +444,9 @@ export async function launchBrowser(browserPath: string, port: number, targetUrl
  */
 export async function openNewTab(hostname: string, port: number, tabUrl?: string): Promise<IRemoteTargetJson | undefined> {
     try {
-        const json = await fetchUri(`http://${hostname}:${port}/json/new?${tabUrl ? tabUrl : ''}`);
+        // Properly encode the URL to handle special characters like &, =, ?, #, spaces
+        const encodedUrl = tabUrl ? encodeURIComponent(tabUrl) : '';
+        const json = await fetchUri(`http://${hostname}:${port}/json/new?${encodedUrl}`);
         const target: IRemoteTargetJson | undefined = JSON.parse(json) as IRemoteTargetJson | undefined;
         return target;
     } catch {

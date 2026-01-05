@@ -85,8 +85,9 @@ export class ScreencastCDPConnection {
     registerForEvent(method: string, callback: CdpEventCallback): void {
         if (this.eventCallbackMap.has(method)) {
             this.eventCallbackMap.get(method)?.push(callback);
+        } else {
+            this.eventCallbackMap.set(method, [callback]);
         }
-        this.eventCallbackMap.set(method, [callback]);
     }
 
     registerWriteToClipboardFunction(saveToClipboard: (message: string) => void): void {
