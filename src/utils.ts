@@ -422,7 +422,9 @@ export async function launchBrowser(browserPath: string, port: number, targetUrl
         '--no-default-browser-check',
         `--remote-debugging-port=${port}`,
         '--disable-features=ProcessPerSiteUpToMainFrameThreshold', // Prevent process sharing between instances
-        '--no-sandbox', // Ensure separate processes
+        // REMOVED: --no-sandbox (SECURITY: This flag disables Chromium's security sandbox)
+        // Sandbox is now enabled for better security. If you experience issues on Linux,
+        // this may indicate missing kernel configurations (namespaces, seccomp).
         targetUrl,
     ];
 
@@ -503,12 +505,110 @@ export function isHeadlessEnabled(): boolean {
 }
 
 /**
+ * Safe browser flags that are allowed in browserArgs setting.
+ * These flags do not pose security risks.
+ */
+const SAFE_BROWSER_FLAGS = new Set([
+    // Window/display flags
+    '--window-size',
+    '--window-position',
+    '--start-maximized',
+    '--start-fullscreen',
+    '--window-name',
+
+    // Performance flags (non-security)
+    '--enable-gpu-rasterization',
+    '--enable-zero-copy',
+    '--enable-native-gpu-memory-buffers',
+
+    // Debugging flags (limited)
+    '--enable-logging',
+    '--v',
+    '--vmodule',
+    '--log-level',
+
+    // Locale/language
+    '--lang',
+    '--accept-lang',
+
+    // Accessibility
+    '--force-color-profile',
+    '--high-dpi-support',
+
+    // User agent
+    '--user-agent',
+]);
+
+/**
+ * Dangerous browser flags that should never be allowed.
+ * These flags disable critical security features.
+ */
+const DANGEROUS_FLAGS = new Set([
+    '--no-sandbox',
+    '--disable-web-security',
+    '--disable-site-isolation-trials',
+    '--allow-file-access-from-files',
+    '--disable-features',
+    '--load-extension',
+    '--disable-gpu-sandbox',
+    '--disable-setuid-sandbox',
+    '--allow-running-insecure-content',
+    '--disable-hang-monitor',
+    '--disable-popup-blocking',
+    '--disable-prompt-on-repost',
+    '--disable-background-networking',
+    '--disable-sync',
+    '--allow-insecure-localhost',
+]);
+
+/**
  * get the command line args which are passed to the browser.
+ * Only allows safe flags to prevent security issues.
  */
 export function getBrowserArgs(): string[] {
     const settings = vscode.workspace.getConfiguration(SETTINGS_STORE_NAME);
     const browserArgs: string[] = settings.get('browserArgs') || [];
-    return browserArgs.map(arg => arg.trim());
+
+    const sanitized: string[] = [];
+    const blocked: string[] = [];
+
+    for (const arg of browserArgs) {
+        const trimmed = arg.trim();
+        if (!trimmed) {
+            continue;
+        }
+
+        // Extract flag name (before = sign if present)
+        const flagName = trimmed.split('=')[0];
+
+        // Check if it's a dangerous flag
+        if (DANGEROUS_FLAGS.has(flagName) || flagName.startsWith('--disable-')) {
+            blocked.push(flagName);
+            console.warn(`[Security] Blocked dangerous browser flag: ${flagName}`);
+            continue;
+        }
+
+        // Check if it's on the allowlist
+        if (SAFE_BROWSER_FLAGS.has(flagName)) {
+            sanitized.push(trimmed);
+        } else {
+            // Unknown flag - log warning but don't block (conservative approach)
+            console.warn(`[Security] Unknown browser flag (not on allowlist): ${flagName}. Allowing but consider reviewing.`);
+            // For now, allow unknown flags that aren't explicitly dangerous
+            // This prevents breaking existing configurations while still blocking known-bad flags
+            sanitized.push(trimmed);
+        }
+    }
+
+    // Show user-visible warning if dangerous flags were blocked
+    if (blocked.length > 0) {
+        void vscode.window.showWarningMessage(
+            `Blocked ${blocked.length} dangerous browser flag(s) for security: ${blocked.join(', ')}. ` +
+            'These flags can compromise browser security. See extension documentation for allowed flags.'
+        );
+    }
+
+    return sanitized;
 }
 
 /**
