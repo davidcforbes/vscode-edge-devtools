@@ -37,7 +37,12 @@
     "main": "./out/extension",
     "sideEffects": false,
     "activationEvents": [
-        "onStartupFinished"
+        "onStartupFinished",
+        "onCommand:vscode-edge-devtools.launch",
+        "onCommand:vscode-edge-devtools.attach",
+        "onCommand:vscode-edge-devtools.newBrowserWindow",
+        "onCommand:vscode-edge-devtools-view.launchHtml",
+        "onCommand:vscode-edge-devtools-view.launchScreencast"
     ],
     "capabilities": {
         "untrustedWorkspaces": {

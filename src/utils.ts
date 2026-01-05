@@ -13,7 +13,13 @@ import TelemetryReporter from '@vscode/extension-telemetry';
 import packageJson from '../package.json';
 import { DebugTelemetryReporter } from './debugTelemetryReporter';
 
-import puppeteer, {Browser} from 'puppeteer-core';
+import puppeteer, {Browser, Target, TargetType} from 'puppeteer-core';
+
+// Re-export puppeteer types for lazy loading in extension.ts
+// This prevents eager loading of puppeteer-core at extension activation time
+// Note: TargetType is exported as value (enum), others as types only
+export type { Browser, Target };
+export { TargetType };
 import { ErrorReporter } from './errorReporter';
 import { ErrorCodes } from './common/errorCodes';
 

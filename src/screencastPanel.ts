@@ -28,6 +28,7 @@ export class ScreencastPanel {
     private currentPageUrl: string;
     private panelSocket: PanelSocket;
     private screencastStartTime;
+    private isDisposed = false;
     private static instances = new Map<string, ScreencastPanel>();
     private static instanceCounter = 0;
     private static onInstanceCountChanged: (() => void) | undefined;
@@ -61,11 +62,13 @@ export class ScreencastPanel {
             // Close the Edge tab before disposing
             this.closeEdgeTab();
 
-            this.dispose();
-            this.panelSocket.dispose();
+            // Record telemetry before dispose
             this.recordEnumeratedHistogram('DevTools.ScreencastToggle', 0);
             const sessionDuration = Date.now() - this.screencastStartTime;
             this.recordPerformanceHistogram('DevTools.ScreencastDuration', sessionDuration);
+
+            // Clean up (dispose will handle the rest)
+            this.dispose();
         }, this);
 
         // Handle view change
@@ -109,9 +112,16 @@ export class ScreencastPanel {
     }
 
     dispose(): void {
+        // Make dispose idempotent to prevent double-dispose errors
+        if (this.isDisposed) {
+            return;
+        }
+        this.isDisposed = true;
+
+        // Remove from instances map
         ScreencastPanel.instances.delete(this.panelId);
 
-        this.panel.dispose();
+        // Dispose socket (NOT panel - it's already being disposed by VS Code)
         this.panelSocket.dispose();
 
         // Notify of instance count change

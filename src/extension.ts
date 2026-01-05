@@ -1,12 +1,14 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-import { Browser, Target, TargetType } from 'puppeteer-core';
 import * as vscode from 'vscode';
 import * as debugCore from 'vscode-chrome-debug-core';
 import TelemetryReporter from '@vscode/extension-telemetry';
 import { ScreencastPanel } from './screencastPanel';
 import {
+    type Browser,
+    type Target,
+    TargetType,
     createTelemetryReporter,
     fixRemoteWebSocket,
     getBrowserPath,
@@ -269,7 +271,12 @@ export function activate(context: vscode.ExtensionContext): void {
         void navigateBrowser(context);
     }));
 
-    void reportFileExtensionTypes(telemetryReporter);
+    // Defer heavy telemetry operations to avoid blocking activation
+    // This prevents "extension failed to activate" on large workspaces
+    setTimeout(() => {
+        void reportFileExtensionTypes(telemetryReporter);
+    }, 1000);
+
     reportExtensionSettings(telemetryReporter);
     vscode.workspace.onDidChangeConfiguration(event => reportChangedExtensionSetting(event, telemetryReporter));
 }
