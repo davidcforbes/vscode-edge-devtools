@@ -38,6 +38,7 @@ export class Screencast {
     private emulatedMedia = '';
     private isTouchMode = false;
     private deviceUserAgent = '';
+    private currentBlobUrl: string | null = null;
 
     constructor() {
         this.backButton = document.getElementById('back') as HTMLButtonElement;
@@ -371,7 +372,27 @@ export class Screencast {
     private onScreencastFrame({data, sessionId}: any): void {
         const expectedRatio = this.emulatedWidth / this.emulatedHeight;
         const actualRatio = this.screencastImage.naturalWidth / this.screencastImage.naturalHeight;
-        this.screencastImage.src = `data:image/png;base64,${data}`;
+
+        // Convert base64 to binary data
+        const binaryString = atob(data);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+
+        // Create Blob and generate object URL
+        const blob = new Blob([bytes], {type: 'image/png'});
+        const blobUrl = URL.createObjectURL(blob);
+
+        // Revoke previous blob URL to prevent memory leaks
+        if (this.currentBlobUrl) {
+            URL.revokeObjectURL(this.currentBlobUrl);
+        }
+
+        // Update image source with new blob URL
+        this.screencastImage.src = blobUrl;
+        this.currentBlobUrl = blobUrl;
+
         if (expectedRatio !== actualRatio) {
             this.updateEmulation();
         }
