@@ -1,0 +1,55 @@
+{
+  "stats": {
+    "total": 9,
+    "passed": 9,
+    "failed": 0,
+    "duration": 759
+  },
+  "results": [
+    {
+      "name": "should create browser target and verify CDP endpoint availability",
+      "passed": true,
+      "duration": 0
+    },
+    {
+      "name": "should manage multiple browser targets independently",
+      "passed": true,
+      "duration": 0
+    },
+    {
+      "name": "should handle rapid target creation and closure",
+      "passed": true,
+      "duration": 0
+    },
+    {
+      "name": "should verify browser mock CDP server is running",
+      "passed": true,
+      "duration": 0
+    },
+    {
+      "name": "should support browser target events",
+      "passed": true,
+      "duration": 201
+    },
+    {
+      "name": "should preserve target state across operations",
+      "passed": true,
+      "duration": 101
+    },
+    {
+      "name": "should cleanup all targets on browser close",
+      "passed": true,
+      "duration": 0
+    },
+    {
+      "name": "should verify test context provides required utilities",
+      "passed": true,
+      "duration": 100
+    },
+    {
+      "name": "should launch VS Code + Edge via orchestration harness",
+      "passed": true,
+      "duration": 1
+    }
+  ]
+}

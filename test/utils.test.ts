@@ -14,10 +14,18 @@ describe("utils", () => {
     let utils: typeof import("../src/utils");
     let mockGetHttp: jest.Mock;
     let mockGetHttps: jest.Mock;
+    let warnSpy: jest.SpyInstance;
 
     beforeEach(async () => {
-        jest.doMock("http");
-        jest.doMock("https");
+        warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+        jest.doMock("http", () => {
+            const actual = jest.requireActual("http");
+            return { ...actual, get: jest.fn() };
+        });
+        jest.doMock("https", () => {
+            const actual = jest.requireActual("https");
+            return { ...actual, get: jest.fn() };
+        });
         jest.doMock("vscode-nls", () => ({ loadMessageBundle: jest.fn().mockReturnValue(jest.fn()) }));
         jest.doMock("vscode", () => createFakeVSCode(), { virtual: true });
         jest.resetModules();
@@ -26,6 +34,10 @@ describe("utils", () => {
         mockGetHttps = jest.requireMock("https").get;
 
         utils = await import("../src/utils");
+    });
+
+    afterEach(() => {
+        warnSpy.mockRestore();
     });
 
     describe("fixRemoteWebSocket", () => {
@@ -387,7 +399,7 @@ describe("utils", () => {
             // Settings should be used if there is no config
             const expectedSettingDir = "/tmp/vscode-edge-devtools-settings-profile";
             const configMock = {
-                get: (name: string) => expectedSettingDir as string | undefined,
+                get: (name: string) => (name === "userDataDir" ? expectedSettingDir : undefined),
             };
             const vscodeMock = await jest.requireMock("vscode");
             vscodeMock.workspace.getConfiguration.mockImplementationOnce(() => configMock);
@@ -606,6 +618,7 @@ describe("utils", () => {
                         "--no-default-browser-check",
                         `--remote-debugging-port=${expectedPort}`,
                         "--disable-features=ProcessPerSiteUpToMainFrameThreshold",
+                        "--disable-blink-features=AutomationControlled",
                         expectedUrl,
                     ],
                     executablePath,
@@ -621,6 +634,7 @@ describe("utils", () => {
                         "--no-default-browser-check",
                         `--remote-debugging-port=${expectedPort}`,
                         "--disable-features=ProcessPerSiteUpToMainFrameThreshold",
+                        "--disable-blink-features=AutomationControlled",
                         expectedUrl,
                     ],
                     executablePath,
@@ -659,6 +673,7 @@ describe("utils", () => {
                         "--no-default-browser-check",
                         `--remote-debugging-port=${expectedPort}`,
                         "--disable-features=ProcessPerSiteUpToMainFrameThreshold",
+                        "--disable-blink-features=AutomationControlled",
                         expectedUrl,
                     ],
                     executablePath,

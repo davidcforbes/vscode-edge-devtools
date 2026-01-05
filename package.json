@@ -61,7 +61,8 @@
             {
                 "command": "vscode-edge-devtools.launch",
                 "title": "%command.launch.title%",
-                "category": "%category.edgeTools%"
+                "category": "%category.edgeTools%",
+                "icon": "$(browser)"
             },
             {
                 "command": "vscode-edge-devtools-view.openSettings",
@@ -175,6 +176,12 @@
             }
         },
         "menus": {
+            "editor/title": [
+                {
+                    "command": "vscode-edge-devtools.launch",
+                    "group": "navigation"
+                }
+            ],
             "explorer/context": [
                 {
                     "when": "resourceLangId == html",

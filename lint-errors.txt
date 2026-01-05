@@ -1,0 +1,76 @@
+
+> vscode-edge-devtools@3.0.0 lint
+> eslint -c .eslintrc.mjs .
+
+
+C:\Development\vscode-edge-devtools\src\common\hostnameValidation.ts
+  59:5  error  Unexpected console statement. Only these console methods are allowed: assert, context, error, timeStamp, time, timeEnd, warn  no-console
+
+C:\Development\vscode-edge-devtools\src\common\urlValidation.ts
+  88:18  error  'e' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Development\vscode-edge-devtools\src\config.ts
+  122:5   error  Unexpected console statement. Only these console methods are allowed: assert, context, error, timeStamp, time, timeEnd, warn  no-console
+  158:13  error  Unexpected console statement. Only these console methods are allowed: assert, context, error, timeStamp, time, timeEnd, warn  no-console
+
+C:\Development\vscode-edge-devtools\src\extension.ts
+  248:81  error  Unsafe member access .message on an `any` value  @typescript-eslint/no-unsafe-member-access
+  255:85  error  Unsafe member access .message on an `any` value  @typescript-eslint/no-unsafe-member-access
+  262:82  error  Unsafe member access .message on an `any` value  @typescript-eslint/no-unsafe-member-access
+  280:91  error  Unsafe member access .message on an `any` value  @typescript-eslint/no-unsafe-member-access
+  287:88  error  Unsafe member access .message on an `any` value  @typescript-eslint/no-unsafe-member-access
+  294:89  error  Unsafe member access .message on an `any` value  @typescript-eslint/no-unsafe-member-access
+  301:88  error  Unsafe member access .message on an `any` value  @typescript-eslint/no-unsafe-member-access
+  308:84  error  Unsafe member access .message on an `any` value  @typescript-eslint/no-unsafe-member-access
+
+C:\Development\vscode-edge-devtools\src\screencast\cdp.ts
+    6:77  error  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+   12:14  error  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+   13:14  error  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+   16:41  error  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+   17:42  error  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+   30:37  error  Unsafe argument of type `any` assigned to a parameter of type `string`  @typescript-eslint/no-unsafe-argument
+   84:50  error  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+   89:13  error  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  117:9   error  Expected an assignment or function call and instead saw an expression   @typescript-eslint/no-unused-expressions
+
+C:\Development\vscode-edge-devtools\src\screencast\dimensionComponent.ts
+  15:8   error  Prefer named exports     import/no-default-export
+  90:26  error  Missing radix parameter  radix
+  92:27  error  Missing radix parameter  radix
+
+C:\Development\vscode-edge-devtools\src\screencast\flyoutMenuComponent.ts
+  33:8  error  Prefer named exports  import/no-default-export
+
+C:\Development\vscode-edge-devtools\src\screencast\infobar.ts
+  12:8  error  Prefer named exports  import/no-default-export
+
+C:\Development\vscode-edge-devtools\src\screencast\input.ts
+   23:32  error  Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+   23:32  error  'any' overrides all other types in this union type  @typescript-eslint/no-redundant-type-constituents
+   97:23  error  Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+  107:20  error  Unsafe member access .deltaX on an `any` value      @typescript-eslint/no-unsafe-member-access
+  108:20  error  Unsafe member access .deltaY on an `any` value      @typescript-eslint/no-unsafe-member-access
+  109:20  error  Unsafe member access .button on an `any` value      @typescript-eslint/no-unsafe-member-access
+  111:13  error  Unsafe assignment of an `any` value                 @typescript-eslint/no-unsafe-assignment
+  118:19  error  Unsafe assignment of an `any` value                 @typescript-eslint/no-unsafe-assignment
+  120:20  error  Unsafe member access .type on an `any` value        @typescript-eslint/no-unsafe-member-access
+
+C:\Development\vscode-edge-devtools\src\screencast\screencast.ts
+  151:126  error  Unsafe argument of type `any` assigned to a parameter of type `{ visible: boolean; }`  @typescript-eslint/no-unsafe-argument
+  157:111  error  Unsafe argument of type `any` assigned to a parameter of type `string`                 @typescript-eslint/no-unsafe-argument
+  207:19   error  Unsafe assignment of an `any` value                                                    @typescript-eslint/no-unsafe-assignment
+  208:13   error  Unsafe assignment of an `any` value                                                    @typescript-eslint/no-unsafe-assignment
+  209:13   error  Unsafe assignment of an `any` value                                                    @typescript-eslint/no-unsafe-assignment
+  306:28   error  Unsafe assignment of an `any` value                                                    @typescript-eslint/no-unsafe-assignment
+  306:34   error  Unsafe assignment of an `any` value                                                    @typescript-eslint/no-unsafe-assignment
+  340:39   error  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  341:20   error  Unsafe member access .parentId on an `any` value                                       @typescript-eslint/no-unsafe-member-access
+  376:26   error  'e' is defined but never used                                                          @typescript-eslint/no-unused-vars
+  388:50   error  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  393:35   error  Unsafe argument of type `any` assigned to a parameter of type `string`                 @typescript-eslint/no-unsafe-argument
+  415:77   error  Unsafe assignment of an `any` value                                                    @typescript-eslint/no-unsafe-assignment
+  429:42   error  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+
+✖ 49 problems (49 errors, 0 warnings)
+
