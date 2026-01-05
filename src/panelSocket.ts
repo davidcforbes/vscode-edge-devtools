@@ -179,6 +179,12 @@ export class PanelSocket extends EventEmitter {
                 }
             } catch (error) {
                 console.error('[PanelSocket] Failed to parse webview websocket message:', error);
+                // Emit parseError event for telemetry/user notification
+                this.emit('parseError', {
+                    context: 'webview-websocket',
+                    error: error instanceof Error ? error.message : String(error),
+                    rawMessage: args.substring(0, 200) // Truncate for safety
+                });
                 // Ignore malformed message - don't crash extension
                 return false;
             }

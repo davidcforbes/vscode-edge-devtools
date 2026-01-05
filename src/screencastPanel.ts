@@ -30,6 +30,9 @@ export class ScreencastPanel {
     private panelSocket: PanelSocket;
     private screencastStartTime;
     private isDisposed = false;
+    private lastParseErrorTime = 0;
+    private parseErrorNotificationShown = false;
+    private static readonly PARSE_ERROR_THROTTLE_MS = 60000; // 1 minute
     private static instances = new Map<string, ScreencastPanel>();
     private static instanceCounter = 0;
     private static onInstanceCountChanged: (() => void) | undefined;
@@ -57,6 +60,7 @@ export class ScreencastPanel {
         this.panelSocket.on('writeToClipboard', (message: string) => this.onSaveToClipboard(message));
         this.panelSocket.on('readClipboard', () => this.onGetClipboardText());
         this.panelSocket.on('navigation', (message: string) => this.onNavigation(message));
+        this.panelSocket.on('parseError', (errorData: unknown) => this.onParseError(errorData));
 
         // Handle closing
         this.panel.onDidDispose(() => {
@@ -236,6 +240,41 @@ export class ScreencastPanel {
             }
         } catch {
             // Ignore parse errors
+        }
+    }
+
+    private onParseError(errorData: unknown): void {
+        // Rate limit parse error reporting to avoid spam
+        const now = Date.now();
+        if (now - this.lastParseErrorTime < ScreencastPanel.PARSE_ERROR_THROTTLE_MS) {
+            return; // Skip this error - too soon after last report
+        }
+        this.lastParseErrorTime = now;
+
+        try {
+            const error = errorData as { context: string; error: string; rawMessage: string };
+            
+            // Report to telemetry
+            this.telemetryReporter.sendTelemetryErrorEvent('devtools/parseError', {
+                'context': error.context || 'unknown',
+                'error': error.error || 'unknown',
+                'messagePreview': error.rawMessage ? error.rawMessage.substring(0, 100) : 'unavailable'
+            });
+
+            // Show user notification (only first occurrence per session to avoid annoyance)
+            if (!this.parseErrorNotificationShown) {
+                this.parseErrorNotificationShown = true;
+                void vscode.window.showWarningMessage(
+                    `Browser preview encountered a message parsing error. Check the output panel for details.`,
+                    'Show Output'
+                ).then(selection => {
+                    if (selection === 'Show Output') {
+                        void vscode.commands.executeCommand('workbench.action.output.toggleOutput');
+                    }
+                });
+            }
+        } catch (reportError) {
+            console.error('[ScreencastPanel] Failed to report parse error:', reportError);
         }
     }
 
