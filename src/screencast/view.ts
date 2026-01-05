@@ -16,11 +16,11 @@ export class ScreencastView {
       <meta http-equiv="Content-Security-Policy"
           content="default-src;
           font-src ${webviewCSP};
-          img-src 'self' data: ${webviewCSP};
+          img-src 'self' blob: ${webviewCSP};
           style-src 'self' 'unsafe-inline' ${webviewCSP};
           script-src 'self' ${webviewCSP};
           frame-src 'self' ${webviewCSP};
-          connect-src 'self' data: ${webviewCSP};
+          connect-src 'self' ${webviewCSP};
       ">
       <meta name="referrer" content="no-referrer">
       <link href="${codiconsUri}" rel="stylesheet" />
