@@ -660,5 +660,108 @@ describe('PanelSocket', () => {
                 expect(mockWebSocket.send).not.toHaveBeenCalled();
             });
         });
+
+        describe('Payload Validation', () => {
+            it('should reject websocket payload missing message field', () => {
+                const socket = new PanelSocket(targetUrl, mockPostMessage);
+                const parseErrorSpy = jest.fn();
+                socket.on('parseError', parseErrorSpy);
+
+                socket.onMessageFromWebview('ready:');
+                if (mockWebSocket.onopen) {
+                    mockWebSocket.onopen();
+                }
+
+                mockWebSocket.send.mockClear();
+
+                // Missing message field
+                const message = `websocket:${JSON.stringify({ foo: 'bar' })}`;
+
+                socket.onMessageFromWebview(message);
+
+                expect(mockWebSocket.send).not.toHaveBeenCalled();
+                expect(parseErrorSpy).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        context: 'webview-websocket-validation',
+                        error: 'Websocket payload missing required field: message'
+                    })
+                );
+            });
+
+            it('should reject websocket payload with non-string message', () => {
+                const socket = new PanelSocket(targetUrl, mockPostMessage);
+                const parseErrorSpy = jest.fn();
+                socket.on('parseError', parseErrorSpy);
+
+                socket.onMessageFromWebview('ready:');
+                if (mockWebSocket.onopen) {
+                    mockWebSocket.onopen();
+                }
+
+                mockWebSocket.send.mockClear();
+
+                // message is a number instead of string
+                const message = `websocket:${JSON.stringify({ message: 123 })}`;
+
+                socket.onMessageFromWebview(message);
+
+                expect(mockWebSocket.send).not.toHaveBeenCalled();
+                expect(parseErrorSpy).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        context: 'webview-websocket-validation',
+                        error: 'Websocket payload message must be a non-empty string'
+                    })
+                );
+            });
+
+            it('should reject websocket payload with empty string message', () => {
+                const socket = new PanelSocket(targetUrl, mockPostMessage);
+                const parseErrorSpy = jest.fn();
+                socket.on('parseError', parseErrorSpy);
+
+                socket.onMessageFromWebview('ready:');
+                if (mockWebSocket.onopen) {
+                    mockWebSocket.onopen();
+                }
+
+                mockWebSocket.send.mockClear();
+
+                // message is an empty string
+                const message = `websocket:${JSON.stringify({ message: '' })}`;
+
+                socket.onMessageFromWebview(message);
+
+                expect(mockWebSocket.send).not.toHaveBeenCalled();
+                expect(parseErrorSpy).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        context: 'webview-websocket-validation',
+                        error: 'Websocket payload message must be a non-empty string'
+                    })
+                );
+            });
+
+            it('should accept valid websocket payload', () => {
+                const socket = new PanelSocket(targetUrl, mockPostMessage);
+                const parseErrorSpy = jest.fn();
+                socket.on('parseError', parseErrorSpy);
+
+                socket.onMessageFromWebview('ready:');
+                if (mockWebSocket.onopen) {
+                    mockWebSocket.onopen();
+                }
+
+                mockWebSocket.send.mockClear();
+
+                // Valid payload with proper structure
+                const cdpCommand = { id: 1, method: 'Page.enable', params: {} };
+                const message = `websocket:${JSON.stringify({ message: JSON.stringify(cdpCommand) })}`;
+
+                socket.onMessageFromWebview(message);
+
+                // Should send the CDP command (it's in the allowlist)
+                expect(mockWebSocket.send).toHaveBeenCalledWith(JSON.stringify(cdpCommand));
+                expect(parseErrorSpy).not.toHaveBeenCalled();
+            });
+        });
     });
 });

@@ -4,6 +4,7 @@
 import { EventEmitter } from 'events';
 import WebSocket from 'ws';
 import { parseMessageFromChannel, WebSocketEvent, WebviewEvent } from './common/webviewEvents';
+import { validateWebsocketPayload } from './common/messageValidation';
 
 export type IDevToolsPostMessageCallback = (e: WebSocketEvent, message?: string) => void;
 
@@ -156,7 +157,21 @@ export class PanelSocket extends EventEmitter {
             }
 
             try {
-                const { message } = JSON.parse(args) as {message: string};
+                // Parse and validate websocket message payload
+                const parsedArgs = JSON.parse(args);
+                const validation = validateWebsocketPayload(parsedArgs);
+
+                if (!validation.success || !validation.value) {
+                    console.warn(`[PanelSocket] Invalid websocket payload: ${validation.error || 'No value returned'}`);
+                    this.emit('parseError', {
+                        context: 'webview-websocket-validation',
+                        error: validation.error || 'Unknown validation error',
+                        rawMessage: args.substring(0, 200)
+                    });
+                    return false;
+                }
+
+                const { message } = validation.value;
                 if (message && message[0] === '{') {
                     // Validate CDP command before forwarding
                     if (!isCDPCommandAllowed(message)) {
