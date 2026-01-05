@@ -50,12 +50,48 @@ function isCDPCommandAllowed(message: string): boolean {
         const isAllowed = ALLOWED_CDP_METHODS.has(command.method);
         if (!isAllowed) {
             console.warn(`[PanelSocket] Blocked unauthorized CDP command: ${command.method}`);
+            return false;
         }
-        return isAllowed;
+
+        // Additional validation for Runtime.evaluate to prevent arbitrary code execution
+        if (command.method === 'Runtime.evaluate') {
+            return isRuntimeEvaluateAllowed(command);
+        }
+
+        return true;
     } catch (error) {
         console.error('[PanelSocket] Failed to parse CDP command for validation:', error);
         return false;
     }
+}
+
+/**
+ * Validates Runtime.evaluate expressions to only allow safe clipboard operations.
+ * Prevents compromised webview from executing arbitrary JavaScript in target page.
+ */
+function isRuntimeEvaluateAllowed(command: CDPCommand): boolean {
+    const params = command.params as { expression?: string } | undefined;
+    const expression = params?.expression;
+    
+    if (!expression || typeof expression !== 'string') {
+        console.warn('[PanelSocket] Runtime.evaluate missing expression parameter');
+        return false;
+    }
+
+    // Allow clipboard copy: exact match for getting selected text
+    if (expression === 'document.getSelection().toString()') {
+        return true;
+    }
+
+    // Allow clipboard paste: document.execCommand with insertText only
+    // Pattern: document.execCommand("insertText", false, <json-string>);
+    const pastePattern = /^document\.execCommand\("insertText",\s*false,\s*"(?:[^"\\]|\\.)*"\);?$/;
+    if (pastePattern.test(expression)) {
+        return true;
+    }
+
+    console.warn(`[PanelSocket] Blocked Runtime.evaluate with unauthorized expression: ${expression.substring(0, 100)}`);
+    return false;
 }
 
 export class PanelSocket extends EventEmitter {
