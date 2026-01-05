@@ -7,6 +7,57 @@ import { parseMessageFromChannel, WebSocketEvent, WebviewEvent } from './common/
 
 export type IDevToolsPostMessageCallback = (e: WebSocketEvent, message?: string) => void;
 
+// Allowlist of CDP commands that the webview is permitted to send
+// This prevents malicious webview code from sending arbitrary CDP commands
+const ALLOWED_CDP_METHODS = new Set([
+    // Input handling
+    'Input.dispatchMouseEvent',
+    'Input.dispatchKeyEvent',
+    'Input.emulateTouchFromMouseEvent',
+    // Page navigation and control
+    'Page.enable',
+    'Page.getNavigationHistory',
+    'Page.startScreencast',
+    'Page.navigateToHistoryEntry',
+    'Page.reload',
+    'Page.navigate',
+    'Page.screencastFrameAck',
+    // Device emulation
+    'Emulation.setUserAgentOverride',
+    'Emulation.setDeviceMetricsOverride',
+    'Emulation.setTouchEmulationEnabled',
+    'Emulation.setEmulatedVisionDeficiency',
+    'Emulation.setEmulatedMedia',
+    'Emulation.setEmitTouchEventsForMouse',
+    // Runtime evaluation (for clipboard and inspect functionality)
+    'Runtime.evaluate',
+]);
+
+interface CDPCommand {
+    id: number;
+    method: string;
+    params?: unknown;
+}
+
+function isCDPCommandAllowed(message: string): boolean {
+    try {
+        const command = JSON.parse(message) as CDPCommand;
+        if (!command.method) {
+            console.warn('[PanelSocket] CDP command missing method field');
+            return false;
+        }
+
+        const isAllowed = ALLOWED_CDP_METHODS.has(command.method);
+        if (!isAllowed) {
+            console.warn(`[PanelSocket] Blocked unauthorized CDP command: ${command.method}`);
+        }
+        return isAllowed;
+    } catch (error) {
+        console.error('[PanelSocket] Failed to parse CDP command for validation:', error);
+        return false;
+    }
+}
+
 export class PanelSocket extends EventEmitter {
     private readonly targetUrl: string;
     private readonly postMessageToDevTools: IDevToolsPostMessageCallback;
@@ -69,6 +120,12 @@ export class PanelSocket extends EventEmitter {
             try {
                 const { message } = JSON.parse(args) as {message: string};
                 if (message && message[0] === '{') {
+                    // Validate CDP command before forwarding
+                    if (!isCDPCommandAllowed(message)) {
+                        console.warn('[PanelSocket] Rejecting unauthorized CDP command from webview');
+                        return false;
+                    }
+
                     if (!this.isConnected) {
                         // DevTools are sending a message before the real websocket has finished opening so cache it
                         this.messages.push(message);
