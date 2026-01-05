@@ -374,7 +374,48 @@ export async function launchScreencast(context: vscode.ExtensionContext, fileUri
 }
 
 export function deactivate(): void {
-    // Extension cleanup if needed
+    console.warn('[Extension] Deactivating extension, cleaning up browser instances...');
+    
+    // Close all browser instances tracked in the map
+    const browsers = Array.from(browserInstances.values());
+    for (const browser of browsers) {
+        try {
+            browser.close().catch(err => {
+                console.error('[Extension] Error closing browser during deactivate:', err);
+            });
+        } catch (err) {
+            console.error('[Extension] Error closing browser during deactivate:', err);
+        }
+    }
+    browserInstances.clear();
+    console.warn(`[Extension] Closed ${browsers.length} browser instance(s) from browserInstances map`);
+    
+    // Close shared browser instance if it exists
+    if (sharedBrowserInstance) {
+        try {
+            sharedBrowserInstance.close().catch(err => {
+                console.error('[Extension] Error closing shared browser during deactivate:', err);
+            });
+            console.warn('[Extension] Closed shared browser instance');
+        } catch (err) {
+            console.error('[Extension] Error closing shared browser during deactivate:', err);
+        }
+        sharedBrowserInstance = null;
+        sharedBrowserPort = null;
+    }
+    
+    // Dispose all ScreencastPanel instances to clean up WebSocket connections
+    const panels = Array.from(ScreencastPanel.getAllInstances().values());
+    for (const panel of panels) {
+        try {
+            panel.dispose();
+        } catch (err) {
+            console.error('[Extension] Error disposing panel during deactivate:', err);
+        }
+    }
+    console.warn(`[Extension] Disposed ${panels.length} panel instance(s)`);
+    
+    console.warn('[Extension] Extension deactivation cleanup complete');
 }
 
 export async function attach(
