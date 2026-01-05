@@ -365,6 +365,20 @@ export async function attach(
 
     console.warn(`[Edge Attach] Starting attach - hostname: ${hostname}, port: ${port}, useHttps: ${useHttps}, attachUrl: ${attachUrl}, timeout: ${timeout}ms`);
 
+    // Warn if connecting to remote hostname without HTTPS
+    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+    if (!isLocalhost && !useHttps) {
+        void vscode.window.showWarningMessage(
+            `Connecting to remote CDP endpoint ${hostname}:${port} without encryption. ` +
+            `Set "vscode-edge-devtools.useHttps: true" to use secure transport (wss/https).`,
+            'Open Settings'
+        ).then(selection => {
+            if (selection === 'Open Settings') {
+                void vscode.commands.executeCommand('workbench.action.openSettings', 'vscode-edge-devtools.useHttps');
+            }
+        });
+    }
+
     // Get the attach target and keep trying until reaching timeout
     const startTime = Date.now();
     let responseArray: IRemoteTargetJson[] = [];
@@ -408,7 +422,7 @@ export async function attach(
                 }
 
                 if (matchedTargets && matchedTargets.length > 0 && matchedTargets[0].webSocketDebuggerUrl) {
-                    const actualTarget = fixRemoteWebSocket(hostname, port, matchedTargets[0] as unknown as IRemoteTargetJson);
+                    const actualTarget = fixRemoteWebSocket(hostname, port, matchedTargets[0] as unknown as IRemoteTargetJson, useHttps);
                     targetWebsocketUrl = actualTarget.webSocketDebuggerUrl;
                     console.warn(`[Edge Attach] Matched target, WebSocket URL: ${targetWebsocketUrl}`);
                 } else if (!useRetry) {
@@ -434,7 +448,7 @@ export async function attach(
                     // Create the list of items to show with fixed websocket addresses
                     console.warn(`[Edge Attach] Showing quick pick with ${responseArray.length} targets`);
                     const items = responseArray.map((i: IRemoteTargetJson) => {
-                        i = fixRemoteWebSocket(hostname, port, i);
+                        i = fixRemoteWebSocket(hostname, port, i, useHttps);
                         return {
                             description: i.url,
                             detail: i.webSocketDebuggerUrl,

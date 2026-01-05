@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 import * as http from 'http';
+import * as https from 'https';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import {
@@ -285,10 +286,13 @@ export class ScreencastPanel {
             const url = new URL(this.targetUrl);
             const hostname = url.hostname;
             const port = url.port;
+            // Use https if WebSocket URL uses wss
+            const protocol = url.protocol === 'wss:' ? 'https' : 'http';
 
             // Use HTTP endpoint to activate the target (browser-level command)
             // GET /json/activate/{targetId}
-            const req = http.get(`http://${hostname}:${port}/json/activate/${targetId}`, res => {
+            const httpModule = url.protocol === 'wss:' ? https : http;
+            const req = httpModule.get(`${protocol}://${hostname}:${port}/json/activate/${targetId}`, res => {
                 if (res.statusCode !== 200) {
                     console.warn(`[ScreencastPanel] Failed to activate tab ${targetId}: HTTP ${res.statusCode}`);
                 }
@@ -313,10 +317,13 @@ export class ScreencastPanel {
             const url = new URL(this.targetUrl);
             const hostname = url.hostname;
             const port = url.port;
+            // Use https if WebSocket URL uses wss
+            const protocol = url.protocol === 'wss:' ? 'https' : 'http';
 
             // Use HTTP endpoint to close the target (browser-level command)
             // GET /json/close/{targetId}
-            const req = http.get(`http://${hostname}:${port}/json/close/${targetId}`, res => {
+            const httpModule = url.protocol === 'wss:' ? https : http;
+            const req = httpModule.get(`${protocol}://${hostname}:${port}/json/close/${targetId}`, res => {
                 if (res.statusCode !== 200) {
                     console.warn(`[ScreencastPanel] Failed to close tab ${targetId}: HTTP ${res.statusCode}`);
                 }

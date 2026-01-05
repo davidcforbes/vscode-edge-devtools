@@ -201,16 +201,20 @@ export function fetchUri(uri: string, options: https.RequestOptions = {}): Promi
  * @param remoteAddress The address of the remote instance of Edge
  * @param remotePort The port used by the remote instance of Edge
  * @param target The target object from the json/list payload
+ * @param useHttps Whether to use secure websocket protocol (wss://)
  */
 export function fixRemoteWebSocket(
     remoteAddress: string,
     remotePort: number,
-    target: IRemoteTargetJson): IRemoteTargetJson {
+    target: IRemoteTargetJson,
+    useHttps: boolean = false): IRemoteTargetJson {
     if (target.webSocketDebuggerUrl) {
-        const re = /ws:\/\/([^/]+)\/?/;
+        const re = /wss?:\/\/([^/]+)\/?/;
         const addressMatch = re.exec(target.webSocketDebuggerUrl);
         if (addressMatch) {
             const replaceAddress = `${remoteAddress}:${remotePort}`;
+            const protocol = useHttps ? 'wss' : 'ws';
+            target.webSocketDebuggerUrl = target.webSocketDebuggerUrl.replace(/^wss?:/, `${protocol}:`);
             target.webSocketDebuggerUrl = target.webSocketDebuggerUrl.replace(addressMatch[1], replaceAddress);
         }
     }
@@ -508,12 +512,14 @@ export async function launchBrowser(browserPath: string, port: number, targetUrl
  * @param hostname The hostname of the browser
  * @param port The port of the browser
  * @param tabUrl The url to open, if any
+ * @param useHttps Whether to use HTTPS for the CDP endpoint
  */
-export async function openNewTab(hostname: string, port: number, tabUrl?: string): Promise<IRemoteTargetJson | undefined> {
+export async function openNewTab(hostname: string, port: number, tabUrl?: string, useHttps: boolean = false): Promise<IRemoteTargetJson | undefined> {
     try {
         // Properly encode the URL to handle special characters like &, =, ?, #, spaces
         const encodedUrl = tabUrl ? encodeURIComponent(tabUrl) : '';
-        const json = await fetchUri(`http://${hostname}:${port}/json/new?${encodedUrl}`);
+        const protocol = useHttps ? 'https' : 'http';
+        const json = await fetchUri(`${protocol}://${hostname}:${port}/json/new?${encodedUrl}`);
         const target: IRemoteTargetJson | undefined = JSON.parse(json) as IRemoteTargetJson | undefined;
         return target;
     } catch {
