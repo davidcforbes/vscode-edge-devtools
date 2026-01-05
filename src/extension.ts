@@ -4,6 +4,7 @@
 import * as vscode from 'vscode';
 import TelemetryReporter from '@vscode/extension-telemetry';
 import { ScreencastPanel } from './screencastPanel';
+import { BrowserSessionManager } from './services/browserSessionManager';
 import {
     type Browser,
     type Target,
@@ -17,7 +18,6 @@ import {
     IRemoteTargetJson,
     IUserConfig,
     launchBrowser,
-    openNewTab,
     retryAsync,
     SETTINGS_DEFAULT_ATTACH_INTERVAL,
     SETTINGS_DEFAULT_URL,
@@ -35,9 +35,8 @@ let telemetryReporter: Readonly<TelemetryReporter>;
 const browserInstances = new Map<string, Browser>();
 let browserStatusBarItem: vscode.StatusBarItem;
 
-// Shared browser instance for creating multiple tabs
-let sharedBrowserInstance: Browser | null = null;
-let sharedBrowserPort: number | null = null;
+// Service for managing shared browser session lifecycle
+const browserSessionManager = new BrowserSessionManager();
 
 async function newBrowserWindow(context: vscode.ExtensionContext): Promise<void> {
     const url = await vscode.window.showInputBox({
@@ -224,24 +223,19 @@ export function activate(context: vscode.ExtensionContext): void {
     // Register callback to close browser when last panel closes
     ScreencastPanel.setLastPanelClosedCallback(() => {
         console.warn('[Extension] Last panel closed, closing shared browser instance');
-        if (sharedBrowserInstance) {
-            const browserToClose = sharedBrowserInstance;
-
+        const session = browserSessionManager.getSharedSession();
+        if (session) {
             // Clean up any browserInstances map entries pointing to the shared browser
             // Do this before closing to avoid race with disconnected event
             for (const [url, browser] of browserInstances.entries()) {
-                if (browser === browserToClose) {
+                if (browser === session.browser) {
                     browserInstances.delete(url);
                     console.warn(`[Extension] Removed shared browser map entry for ${url}`);
                 }
             }
-
-            browserToClose.close().catch(err => {
-                console.error('[Extension] Error closing shared browser:', err);
-            });
-            sharedBrowserInstance = null;
-            sharedBrowserPort = null;
         }
+
+        void browserSessionManager.closeSharedBrowser();
     });
 
     context.subscriptions.push(vscode.commands.registerCommand(`${SETTINGS_STORE_NAME}.attach`, (): void => {
@@ -393,18 +387,7 @@ export function deactivate(): void {
     console.warn(`[Extension] Closed ${browsers.length} browser instance(s) from browserInstances map`);
 
     // Close shared browser instance if it exists
-    if (sharedBrowserInstance) {
-        try {
-            sharedBrowserInstance.close().catch(err => {
-                console.error('[Extension] Error closing shared browser during deactivate:', err);
-            });
-            console.warn('[Extension] Closed shared browser instance');
-        } catch (err) {
-            console.error('[Extension] Error closing shared browser during deactivate:', err);
-        }
-        sharedBrowserInstance = null;
-        sharedBrowserPort = null;
-    }
+    void browserSessionManager.closeSharedBrowser();
 
     // Dispose all ScreencastPanel instances to clean up WebSocket connections
     const panels = Array.from(ScreencastPanel.getAllInstances().values());
@@ -585,22 +568,12 @@ export async function launch(context: vscode.ExtensionContext, launchUrl?: strin
     const url = launchUrl || defaultUrl;
 
     // Try to reuse existing browser instance by creating a new tab
-    if (sharedBrowserInstance && sharedBrowserPort) {
-        // Verify browser is still alive before attempting reuse
-        if (!sharedBrowserInstance.isConnected()) {
-            console.warn(`[Edge Launch] Shared browser instance is no longer connected, clearing stale reference`);
-            sharedBrowserInstance = null;
-            sharedBrowserPort = null;
-        } else {
-            console.warn(`[Edge Launch] Reusing existing browser on port ${sharedBrowserPort}, creating new tab for: ${url}`);
-            const target = await openNewTab(hostname, sharedBrowserPort, url);
-            if (target && target.webSocketDebuggerUrl) {
-                telemetryReporter.sendTelemetryEvent('command/launch/reused_browser', telemetryProps);
-                ScreencastPanel.createOrShow(context, telemetryReporter, target.webSocketDebuggerUrl);
-                return;
-            }
-            console.warn(`[Edge Launch] Failed to create new tab in existing browser, will launch new browser`);
-        }
+    // IMPORTANT: CDP endpoint always uses HTTP, never HTTPS
+    const target = await browserSessionManager.openNewTabInSharedBrowser(hostname, url, false);
+    if (target && target.webSocketDebuggerUrl) {
+        telemetryReporter.sendTelemetryEvent('command/launch/reused_browser', telemetryProps);
+        ScreencastPanel.createOrShow(context, telemetryReporter, target.webSocketDebuggerUrl);
+        return;
     }
 
     // No existing browser or failed to create tab, launch a new browser instance
@@ -652,16 +625,13 @@ export async function launch(context: vscode.ExtensionContext, launchUrl?: strin
             console.warn(`[Edge Launch] Extracted port: ${actualPort}, will attach to target: ${url}`);
 
             // Save as shared browser instance for reuse
-            if (!sharedBrowserInstance) {
-                sharedBrowserInstance = browser;
-                sharedBrowserPort = actualPort;
+            if (!browserSessionManager.hasSharedSession()) {
+                browserSessionManager.setSharedSession(browser, actualPort);
                 console.warn(`[Edge Launch] Saved as shared browser instance on port ${actualPort}`);
 
-                // Clean up both shared instance and map entry when browser disconnects
+                // Clean up map entry when browser disconnects (session manager handles its own cleanup)
                 browser.on('disconnected', () => {
-                    console.warn(`[Edge Launch] Shared browser disconnected, clearing shared instance and map entry`);
-                    sharedBrowserInstance = null;
-                    sharedBrowserPort = null;
+                    console.warn(`[Edge Launch] Shared browser disconnected, removing from map`);
                     browserInstances.delete(browserWsEndpoint);
                 });
             } else {
