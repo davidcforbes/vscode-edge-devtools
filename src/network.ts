@@ -31,8 +31,9 @@ export interface IRequestCDPProxyResult {
  *
  * @param uri The uri to request
  * @param options The options that should be used for the request
+ * @param timeoutMs Request timeout in milliseconds (default: 5000ms)
  */
-export function fetchUri(uri: string, options: https.RequestOptions = {}): Promise<string> {
+export function fetchUri(uri: string, options: https.RequestOptions = {}, timeoutMs: number = 5000): Promise<string> {
     return new Promise((resolve, reject) => {
         const parsedUrl = url.parse(uri);
         const get = (parsedUrl.protocol === 'https:' ? https.get : http.get);
@@ -52,7 +53,7 @@ export function fetchUri(uri: string, options: https.RequestOptions = {}): Promi
             method: options.method || 'GET', // Default to GET for fetching data
         } as http.RequestOptions;
 
-        get(options, response => {
+        const request = get(options, response => {
             let responseData = '';
             response.on('data', chunk => {
                 responseData += chunk;
@@ -67,6 +68,12 @@ export function fetchUri(uri: string, options: https.RequestOptions = {}): Promi
             });
         }).on('error', e => {
             reject(e);
+        });
+
+        // Add timeout handling to prevent hung requests
+        request.setTimeout(timeoutMs, () => {
+            request.destroy();
+            reject(new Error(`HTTP request timeout after ${timeoutMs}ms for ${uri}`));
         });
     });
 }
