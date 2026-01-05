@@ -30,7 +30,7 @@ interface FlyoutMenuProps {
     menuItemSections: MenuItemSection[];
 }
 
-export default class FlyoutMenuComponent {
+export class FlyoutMenuComponent {
     #buttonRef = createRef();
     #globalSelectedItem: string | undefined;
     #iconName: string;

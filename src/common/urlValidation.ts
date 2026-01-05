@@ -85,7 +85,7 @@ export function sanitizeUrl(url: string): string | null {
     if (sanitized.startsWith('/') || (sanitized.length > 1 && sanitized[1] === ':')) {
         try {
             sanitized = new URL(`file://${sanitized}`).href;
-        } catch (e) {
+        } catch {
             // If file URL conversion fails, return null
             return null;
         }

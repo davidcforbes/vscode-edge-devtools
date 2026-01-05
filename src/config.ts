@@ -119,7 +119,7 @@ export async function getRemoteEndpointSettings(config: Partial<IUserConfig> = {
 
     // Log hostname type for telemetry/audit
     const hostnameType = getHostnameType(hostname);
-    console.log(`[CDP Security] Connecting to ${hostnameType} CDP endpoint: ${hostname}`);
+    console.warn(`[CDP Security] Connecting to ${hostnameType} CDP endpoint: ${hostname}`);
 
     const port: number = config.port ?? settings.get('port') ?? SETTINGS_DEFAULT_PORT;
     const useHttps: boolean = config.useHttps ?? settings.get('useHttps') ?? SETTINGS_DEFAULT_USE_HTTPS;
@@ -155,7 +155,7 @@ export async function getRemoteEndpointSettings(config: Partial<IUserConfig> = {
         } else if (validation.normalized) {
             // Use normalized path
             userDataDir = validation.normalized;
-            console.log(`[Path Security] Using validated userDataDir: ${userDataDir}`);
+            console.warn(`[Path Security] Using validated userDataDir: ${userDataDir}`);
         }
     }
 

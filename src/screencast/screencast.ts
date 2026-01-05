@@ -5,9 +5,9 @@ import {html, render} from 'lit-html';
 
 import { ScreencastCDPConnection, vscode } from './cdp';
 import { MouseEventMap, ScreencastInputHandler } from './input';
-import DimensionComponent from './dimensionComponent';
+import { DimensionComponent } from './dimensionComponent';
 import { getEmulatedDeviceDetails, groupEmulatedDevicesByType } from './emulatedDeviceHelpers';
-import FlyoutMenuComponent, {OffsetDirection} from './flyoutMenuComponent';
+import { FlyoutMenuComponent, OffsetDirection } from './flyoutMenuComponent';
 
 import { encodeMessageForChannel } from '../common/webviewEvents';
 
@@ -15,6 +15,30 @@ type NavigationEntry = {
     id: number;
     url: string;
 };
+
+interface FrameNavigatedEvent {
+    frame: {
+        parentId?: string;
+    };
+}
+
+interface ScreencastFrameEvent {
+    data: string;
+    sessionId: number;
+}
+
+interface ToggleInspectEvent {
+    enabled: boolean;
+}
+
+interface NavigationHistoryResult {
+    currentIndex: number;
+    entries: NavigationEntry[];
+}
+
+interface ScreencastVisibilityChangedEvent {
+    visible: boolean;
+}
 
 export class Screencast {
     private cdpConnection = new ScreencastCDPConnection();
@@ -34,7 +58,7 @@ export class Screencast {
     private emulatedWidth = 0;
     private emulatedHeight = 0;
     private inspectMode = false;
-    private mediaFeatureConfig = new Map();
+    private mediaFeatureConfig = new Map<string, string>();
     private emulatedMedia = '';
     private isTouchMode = false;
     private deviceUserAgent = '';
@@ -146,15 +170,25 @@ export class Screencast {
             }).template()}
         `, document.getElementById('emulation-bar-left')!);
 
-        this.cdpConnection.registerForEvent('Page.frameNavigated', result => this.onFrameNavigated(result));
-        this.cdpConnection.registerForEvent('Page.screencastFrame', result => this.onScreencastFrame(result));
-        this.cdpConnection.registerForEvent('Page.screencastVisibilityChanged', result => this.onScreencastVisibilityChanged(result));
+        this.cdpConnection.registerForEvent('Page.frameNavigated', result => {
+            this.onFrameNavigated(result as FrameNavigatedEvent);
+        });
+        this.cdpConnection.registerForEvent('Page.screencastFrame', result => {
+            this.onScreencastFrame(result as ScreencastFrameEvent);
+        });
+        this.cdpConnection.registerForEvent('Page.screencastVisibilityChanged', result => {
+            this.onScreencastVisibilityChanged(result as ScreencastVisibilityChangedEvent);
+        });
 
         // This message comes from the ScreencastPanel instance.
-        this.cdpConnection.registerForEvent('DevTools.toggleInspect', result => this.onToggleInspect(result));
+        this.cdpConnection.registerForEvent('DevTools.toggleInspect', result => {
+            this.onToggleInspect(result as ToggleInspectEvent);
+        });
         this.cdpConnection.registerWriteToClipboardFunction(result => this.onSaveToClipboard(result));
         this.cdpConnection.registerReadClipboardAndPasteFunction(() => this.getClipboardContents());
-        this.cdpConnection.registerForEvent('readClipboard', clipboardContents => this.pasteClipboardContents(clipboardContents));
+        this.cdpConnection.registerForEvent('readClipboard', clipboardContents => {
+            this.pasteClipboardContents(clipboardContents as string);
+        });
 
         this.inputHandler = new ScreencastInputHandler(this.cdpConnection);
 
@@ -204,7 +238,7 @@ export class Screencast {
 
     private updateHistory(): void {
         this.cdpConnection.sendMessageToBackend('Page.getNavigationHistory', {}, result => {
-            const {currentIndex, entries} = result;
+            const { currentIndex, entries } = result as NavigationHistoryResult;
             this.history = entries;
             this.historyIndex = currentIndex;
             this.backButton.disabled = this.historyIndex < 1;
@@ -337,7 +371,7 @@ export class Screencast {
         }
     }
 
-    private onFrameNavigated({frame}: any): void {
+    private onFrameNavigated({frame}: FrameNavigatedEvent): void {
         if (!frame.parentId) {
             this.updateHistory();
         }
@@ -373,7 +407,7 @@ export class Screencast {
             if (url.startsWith('/') || url[1] === ':') {
                 try {
                     url = new URL(`file://${url}`).href;
-                } catch (e) {
+                } catch {
                     // Try the original URL if it can't be converted to a file URL.
                 }
             }
@@ -385,7 +419,7 @@ export class Screencast {
         }
     }
 
-    private onScreencastFrame({data, sessionId}: any): void {
+    private onScreencastFrame({data, sessionId}: ScreencastFrameEvent): void {
         const expectedRatio = this.emulatedWidth / this.emulatedHeight;
         const actualRatio = this.screencastImage.naturalWidth / this.screencastImage.naturalHeight;
 
@@ -426,7 +460,7 @@ export class Screencast {
         }
     }
 
-    private onToggleInspect({ enabled }: any): void {
+    private onToggleInspect({ enabled }: ToggleInspectEvent): void {
         this.setTouchMode(!enabled);
     }
 

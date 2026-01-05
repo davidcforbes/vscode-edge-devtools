@@ -12,7 +12,7 @@ interface DimensionComponentProps {
 }
 
 let component: DimensionComponent;
-export default class DimensionComponent {
+export class DimensionComponent {
     textInputWidth = createRef();
     textInputHeight = createRef();
     width: number;
@@ -87,9 +87,9 @@ export default class DimensionComponent {
         const oldHeight = this.height;
 
         if (e.target === this.textInputWidth.value) {
-            this.width = parseInt((this.textInputWidth.value as HTMLInputElement).value);
+            this.width = parseInt((this.textInputWidth.value as HTMLInputElement).value, 10);
         } else if (e.target === this.textInputHeight.value) {
-            this.height = parseInt((this.textInputHeight.value as HTMLInputElement).value);
+            this.height = parseInt((this.textInputHeight.value as HTMLInputElement).value, 10);
         }
 
         if (this.width === oldWidth && this.height === oldHeight) {

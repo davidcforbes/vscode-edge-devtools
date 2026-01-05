@@ -18,9 +18,20 @@ const MouseButtonMap = [
     'forward'
 ];
 
+interface TouchParams {
+    type: string;
+    x: number;
+    y: number;
+    modifiers: number;
+    button: string;
+    clickCount: number;
+    deltaX?: number;
+    deltaY?: number;
+}
+
 export class ScreencastInputHandler {
     private cdpConnection: ScreencastCDPConnection;
-    private activeTouchParams: any | null;
+    private activeTouchParams: TouchParams | null;
 
     constructor(cdpConnection: ScreencastCDPConnection) {
         this.cdpConnection = cdpConnection;
@@ -94,7 +105,7 @@ export class ScreencastInputHandler {
             return;
         }
 
-        const params: any = {
+        const params: TouchParams = {
             type: eventType,
             x: Math.round(mouseEvent.offsetX / scale),
             y: Math.round(mouseEvent.offsetY / scale),

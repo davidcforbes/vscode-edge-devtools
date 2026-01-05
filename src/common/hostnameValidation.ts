@@ -56,7 +56,7 @@ export async function validateCDPHostname(hostname: string): Promise<boolean> {
     const approved = choice === 'Connect Anyway';
 
     // Log for audit trail
-    console.log(`[CDP Hostname Validation] Remote hostname "${hostname}" - User ${approved ? 'approved' : 'rejected'} connection`);
+    console.warn(`[CDP Hostname Validation] Remote hostname "${hostname}" - User ${approved ? 'approved' : 'rejected'} connection`);
 
     return approved;
 }

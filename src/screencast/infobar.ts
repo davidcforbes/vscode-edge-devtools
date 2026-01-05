@@ -9,7 +9,7 @@ interface InfobarProps {
     message: string;
 }
 
-export default class InfobarComponent {
+export class InfobarComponent {
     #buttonRef = createRef();
     #message: string;
     #container: HTMLElement | undefined;

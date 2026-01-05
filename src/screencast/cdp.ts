@@ -3,18 +3,18 @@
 
 import { encodeMessageForChannel, parseMessageFromChannel } from '../common/webviewEvents';
 
-declare const acquireVsCodeApi: () => {postMessage(message: unknown, args?: any): void};
+declare const acquireVsCodeApi: () => {postMessage(message: unknown, args?: unknown): void};
 export const vscode = acquireVsCodeApi();
 
 interface CdpMessage {
     id: number;
     method: string;
-    params?: any;
-    result?: any;
+    params?: unknown;
+    result?: unknown;
 }
 
-export type CdpEventCallback = (params: any) => void;
-export type CdpMethodCallback = (result: any) => void;
+export type CdpEventCallback = (params: unknown) => void;
+export type CdpMethodCallback = (result: unknown) => void;
 
 export class ScreencastCDPConnection {
     private nextId: number = 0;
@@ -27,7 +27,7 @@ export class ScreencastCDPConnection {
     constructor() {
         // Handle CDP messages/events routed from the extension through post message
         window.addEventListener('message', e => {
-            parseMessageFromChannel(e.data, (eventName, args) => {
+            parseMessageFromChannel(e.data as string, (eventName, args: string) => {
                 if (eventName === 'websocket') {
                     try {
                         const { message } = JSON.parse(args) as { message: string };
@@ -81,7 +81,7 @@ export class ScreencastCDPConnection {
         });
     }
 
-    sendMessageToBackend(method: string, params: any, callback?: CdpMethodCallback, isCutOrCopy?: boolean): void {
+    sendMessageToBackend(method: string, params: unknown, callback?: CdpMethodCallback, isCutOrCopy?: boolean): void {
         const id = this.nextId++;
         const cdpMessage: CdpMessage = {
             id: id,
@@ -114,6 +114,8 @@ export class ScreencastCDPConnection {
     }
 
     readClipboardAndPasteRequest(): void {
-        this.readClipboardAndPaste && this.readClipboardAndPaste();
+        if (this.readClipboardAndPaste) {
+            this.readClipboardAndPaste();
+        }
     }
 }

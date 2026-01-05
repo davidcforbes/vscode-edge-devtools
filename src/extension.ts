@@ -245,21 +245,21 @@ export function activate(context: vscode.ExtensionContext): void {
 
         browserSessionManager.closeSharedBrowser().catch(err => {
             console.error('[Extension] Failed to close shared browser:', err);
-            void vscode.window.showErrorMessage(`Failed to close browser: ${err.message || err}`);
+            void vscode.window.showErrorMessage(`Failed to close browser: ${err instanceof Error ? err.message : String(err)}`);
         });
     });
 
     context.subscriptions.push(vscode.commands.registerCommand(`${SETTINGS_STORE_NAME}.attach`, (): void => {
         attach(context).catch(err => {
             console.error('[Command] attach failed:', err);
-            void vscode.window.showErrorMessage(`Failed to attach to browser: ${err.message || err}`);
+            void vscode.window.showErrorMessage(`Failed to attach to browser: ${err instanceof Error ? err.message : String(err)}`);
         });
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand(`${SETTINGS_STORE_NAME}.launch`, (opts: {launchUrl: string} = {launchUrl: ''}): void => {
         launch(context, opts.launchUrl).catch(err => {
             console.error('[Command] launch failed:', err);
-            void vscode.window.showErrorMessage(`Failed to launch browser: ${err.message || err}`);
+            void vscode.window.showErrorMessage(`Failed to launch browser: ${err instanceof Error ? err.message : String(err)}`);
         });
     }));
 
@@ -277,35 +277,35 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(vscode.commands.registerCommand(`${SETTINGS_STORE_NAME}.newBrowserWindow`, (): void => {
         newBrowserWindow(context).catch(err => {
             console.error('[Command] newBrowserWindow failed:', err);
-            void vscode.window.showErrorMessage(`Failed to open new browser window: ${err.message || err}`);
+            void vscode.window.showErrorMessage(`Failed to open new browser window: ${err instanceof Error ? err.message : String(err)}`);
         });
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand(`${SETTINGS_STORE_NAME}.listOpenBrowsers`, (): void => {
         listOpenBrowsers(context).catch(err => {
             console.error('[Command] listOpenBrowsers failed:', err);
-            void vscode.window.showErrorMessage(`Failed to list browser windows: ${err.message || err}`);
+            void vscode.window.showErrorMessage(`Failed to list browser windows: ${err instanceof Error ? err.message : String(err)}`);
         });
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand(`${SETTINGS_STORE_NAME}.switchToBrowser`, (): void => {
         switchToBrowser(context).catch(err => {
             console.error('[Command] switchToBrowser failed:', err);
-            void vscode.window.showErrorMessage(`Failed to switch browser window: ${err.message || err}`);
+            void vscode.window.showErrorMessage(`Failed to switch browser window: ${err instanceof Error ? err.message : String(err)}`);
         });
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand(`${SETTINGS_STORE_NAME}.closeCurrentBrowser`, (): void => {
         closeCurrentBrowser().catch(err => {
             console.error('[Command] closeCurrentBrowser failed:', err);
-            void vscode.window.showErrorMessage(`Failed to close browser window: ${err.message || err}`);
+            void vscode.window.showErrorMessage(`Failed to close browser window: ${err instanceof Error ? err.message : String(err)}`);
         });
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand(`${SETTINGS_STORE_NAME}.navigateBrowser`, (): void => {
         navigateBrowser(context).catch(err => {
             console.error('[Command] navigateBrowser failed:', err);
-            void vscode.window.showErrorMessage(`Failed to navigate browser: ${err.message || err}`);
+            void vscode.window.showErrorMessage(`Failed to navigate browser: ${err instanceof Error ? err.message : String(err)}`);
         });
     }));
 
