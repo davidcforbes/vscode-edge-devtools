@@ -79,14 +79,45 @@ export interface IOpenEditorData {
 export function parseMessageFromChannel(
     message: string,
     emit: (eventName: WebviewEvent, args: string) => boolean): boolean {
-    for (const e of webviewEventNames) {
-        if (message.substr(0, e.length) === e && message[e.length] === ':') {
-            emit(e, message.substr(e.length + 1));
-            return true;
+    // Validate message length to prevent DOS attacks
+    const MAX_MESSAGE_LENGTH = 10 * 1024 * 1024; // 10MB
+    if (typeof message !== 'string' || message.length > MAX_MESSAGE_LENGTH) {
+        console.warn('[webviewEvents] Invalid or oversized message', { 
+            type: typeof message, 
+            length: typeof message === 'string' ? message.length : 0 
+        });
+        return false;
+    }
+
+    // Find event separator
+    const separatorIndex = message.indexOf(':');
+    if (separatorIndex === -1) {
+        console.warn('[webviewEvents] Message missing separator');
+        return false;
+    }
+
+    const eventName = message.substring(0, separatorIndex);
+    
+    // Validate event name against allowlist
+    if (!webviewEventNames.includes(eventName as WebviewEvent)) {
+        console.warn(`[webviewEvents] Unknown event type: ${eventName}`);
+        return false;
+    }
+
+    const argsString = message.substring(separatorIndex + 1);
+
+    // Validate JSON structure if args provided
+    if (argsString.length > 0) {
+        try {
+            JSON.parse(argsString);
+        } catch (error) {
+            console.warn(`[webviewEvents] Invalid JSON in message args for event ${eventName}:`, error);
+            return false;
         }
     }
 
-    return false;
+    emit(eventName as WebviewEvent, argsString);
+    return true;
 }
 
 /**
@@ -94,7 +125,7 @@ export function parseMessageFromChannel(
  * supplied object containing the postMessage function.
  * The message can be parsed on the other side using parseMessageFromChannel
  *
- * @param postMessageObject The object which contains the postMessage function
+ * @param postMessageCallback The object which contains the postMessage function
  * @param eventType The type of the message to post
  * @param args The argument object to encode and post
  * @param origin The origin (if any) to use with the postMessage call
@@ -103,6 +134,17 @@ export function encodeMessageForChannel(
     postMessageCallback: (message: string) => void,
     eventType: WebviewEvent,
     args?: unknown): void {
-    const message = `${eventType}:${JSON.stringify(args)}`;
-    postMessageCallback(message);
+    // Validate event type is in allowlist
+    if (!webviewEventNames.includes(eventType)) {
+        console.error(`[webviewEvents] Attempted to encode unknown event type: ${eventType}`);
+        return;
+    }
+
+    try {
+        const argsString = args !== undefined ? JSON.stringify(args) : '';
+        const message = `${eventType}:${argsString}`;
+        postMessageCallback(message);
+    } catch (error) {
+        console.error(`[webviewEvents] Failed to encode message for event ${eventType}:`, error);
+    }
 }
