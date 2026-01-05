@@ -170,7 +170,7 @@ export function fetchUri(uri: string, options: https.RequestOptions = {}): Promi
             rejectUnauthorized: !isLocalhost,
             ...parsedUrl,
             ...options,
-            method: 'PUT',
+            method: options.method || 'GET', // Default to GET for fetching data
         } as http.RequestOptions;
 
         get(options, response => {
