@@ -157,8 +157,17 @@ export function fetchUri(uri: string, options: https.RequestOptions = {}): Promi
     return new Promise((resolve, reject) => {
         const parsedUrl = url.parse(uri);
         const get = (parsedUrl.protocol === 'https:' ? https.get : http.get);
+
+        // Only disable TLS verification for localhost connections
+        // Remote connections should use proper certificate validation
+        const isLocalhost = parsedUrl.hostname === 'localhost' ||
+                           parsedUrl.hostname === '127.0.0.1' ||
+                           parsedUrl.hostname === '::1';
+
         options = {
-            rejectUnauthorized: false,
+            // Disable certificate validation only for localhost (self-signed certs common in dev)
+            // For remote connections, always verify certificates to prevent MITM attacks
+            rejectUnauthorized: !isLocalhost,
             ...parsedUrl,
             ...options,
             method: 'PUT',
