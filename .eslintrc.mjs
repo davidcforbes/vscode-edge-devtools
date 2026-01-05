@@ -7,13 +7,23 @@ import importPlugin from 'eslint-plugin-import';
 import globals from 'globals';
 
 export default [
+  // Global ignores must come first
+  {
+    ignores: [
+      '**/*.test*',
+      '**/test/**/*',
+      'out/**',
+      'node_modules/**',
+      '.vscode/**',
+      '*.vsix',
+      'coverage/**',
+      '.eslintrc.mjs',
+      'webpack.config.js'
+    ]
+  },
   js.configs.recommended,
   {
     files: ['**/*.{js,ts,tsx}'],
-    ignores: [
-      '**/*.test*',
-      '**/test/**/*'
-    ],
     languageOptions: {
       parser: typescriptParser,
       parserOptions: {
@@ -24,6 +34,7 @@ export default [
         ...globals.browser,
         ...globals.node,
         ...globals.es2022,
+        process: 'readonly',
       }
     },
     plugins: {
