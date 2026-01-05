@@ -431,16 +431,40 @@ export async function attach(
 
     // Warn if connecting to remote hostname without HTTPS
     const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+    const isRemoteSession = !!vscode.env.remoteName;
+    const remoteName = vscode.env.remoteName || 'unknown';
+    const isTunneledSession = remoteName === 'tunnel' || remoteName === 'codespaces';
+    
     if (!isLocalhost && !useHttps) {
+        let warningMessage = `Connecting to remote CDP endpoint ${hostname}:${port} without encryption. `;
+        
+        if (isRemoteSession) {
+            warningMessage += `You are in a ${remoteName} session. `;
+            if (isTunneledSession) {
+                warningMessage += `For tunneled/remote sessions, HTTPS is strongly recommended for security. `;
+            }
+        }
+        
+        warningMessage += `Set "vscode-edge-devtools.useHttps: true" to use secure transport (wss/https).`;
+        
         void vscode.window.showWarningMessage(
-            `Connecting to remote CDP endpoint ${hostname}:${port} without encryption. ` +
-            `Set "vscode-edge-devtools.useHttps: true" to use secure transport (wss/https).`,
-            'Open Settings'
+            warningMessage,
+            'Open Settings',
+            'Learn More'
         ).then(selection => {
             if (selection === 'Open Settings') {
                 void vscode.commands.executeCommand('workbench.action.openSettings', 'vscode-edge-devtools.useHttps');
+            } else if (selection === 'Learn More') {
+                void vscode.env.openExternal(vscode.Uri.parse(
+                    'https://github.com/microsoft/vscode-edge-devtools#remote-debugging'
+                ));
             }
         });
+    }
+    
+    // Log remote session information for debugging
+    if (isRemoteSession) {
+        console.warn(`[Edge Attach] Remote session detected: ${remoteName}, hostname: ${hostname}, useHttps: ${useHttps}`);
     }
 
     // Get the attach target and keep trying until reaching timeout
