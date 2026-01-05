@@ -14,6 +14,7 @@ const ALLOWED_CDP_METHODS = new Set([
     'Input.dispatchMouseEvent',
     'Input.dispatchKeyEvent',
     'Input.emulateTouchFromMouseEvent',
+    'Input.insertText',
     // Page navigation and control
     'Page.enable',
     'Page.getNavigationHistory',
@@ -29,7 +30,7 @@ const ALLOWED_CDP_METHODS = new Set([
     'Emulation.setEmulatedVisionDeficiency',
     'Emulation.setEmulatedMedia',
     'Emulation.setEmitTouchEventsForMouse',
-    // Runtime evaluation (for clipboard and inspect functionality)
+    // Runtime evaluation (clipboard copy only - paste uses Input.insertText)
     'Runtime.evaluate',
 ]);
 
@@ -66,8 +67,10 @@ function isCDPCommandAllowed(message: string): boolean {
 }
 
 /**
- * Validates Runtime.evaluate expressions to only allow safe clipboard operations.
+ * Validates Runtime.evaluate expressions to only allow safe clipboard copy operation.
  * Prevents compromised webview from executing arbitrary JavaScript in target page.
+ *
+ * Note: Paste operations now use Input.insertText instead of Runtime.evaluate for better security.
  */
 function isRuntimeEvaluateAllowed(command: CDPCommand): boolean {
     const params = command.params as { expression?: string } | undefined;
@@ -78,15 +81,9 @@ function isRuntimeEvaluateAllowed(command: CDPCommand): boolean {
         return false;
     }
 
-    // Allow clipboard copy: exact match for getting selected text
+    // Allow clipboard copy only: exact match for getting selected text
+    // This is the ONLY permitted Runtime.evaluate expression
     if (expression === 'document.getSelection().toString()') {
-        return true;
-    }
-
-    // Allow clipboard paste: document.execCommand with insertText only
-    // Pattern: document.execCommand("insertText", false, <json-string>);
-    const pastePattern = /^document\.execCommand\("insertText",\s*false,\s*"(?:[^"\\]|\\.)*"\);?$/;
-    if (pastePattern.test(expression)) {
         return true;
     }
 

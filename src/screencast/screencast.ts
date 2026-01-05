@@ -417,10 +417,10 @@ export class Screencast {
     }
 
     private pasteClipboardContents(message: string) {
-        // Use JSON.stringify to properly escape all special characters (newlines, quotes, etc.)
-        // JSON.stringify returns a quoted string, so we use it directly in the expression
-        this.cdpConnection.sendMessageToBackend('Runtime.evaluate', {
-            expression: `document.execCommand("insertText", false, ${JSON.stringify(message)});`,
+        // Use Input.insertText instead of Runtime.evaluate for safer text insertion
+        // This avoids JavaScript execution in the target page context
+        this.cdpConnection.sendMessageToBackend('Input.insertText', {
+            text: message,
         });
     }
 

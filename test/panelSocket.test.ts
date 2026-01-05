@@ -438,6 +438,7 @@ describe('PanelSocket', () => {
                 'Input.dispatchMouseEvent',
                 'Input.dispatchKeyEvent',
                 'Input.emulateTouchFromMouseEvent',
+                'Input.insertText',
                 'Page.enable',
                 'Page.getNavigationHistory',
                 'Page.startScreencast',
@@ -525,44 +526,6 @@ describe('PanelSocket', () => {
                 expect(mockWebSocket.send).toHaveBeenCalledWith(JSON.stringify(command));
             });
 
-            it('should allow clipboard paste operation', () => {
-                const socket = new PanelSocket(targetUrl, mockPostMessage);
-
-                socket.onMessageFromWebview('ready:');
-                if (mockWebSocket.onopen) {
-                    mockWebSocket.onopen();
-                }
-
-                mockWebSocket.send.mockClear();
-
-                const expression = 'document.execCommand("insertText", false, "test content");';
-                const command = { id: 1, method: 'Runtime.evaluate', params: { expression } };
-                const message = `websocket:${JSON.stringify({ message: JSON.stringify(command) })}`;
-
-                socket.onMessageFromWebview(message);
-
-                expect(mockWebSocket.send).toHaveBeenCalledWith(JSON.stringify(command));
-            });
-
-            it('should allow clipboard paste with escaped characters', () => {
-                const socket = new PanelSocket(targetUrl, mockPostMessage);
-
-                socket.onMessageFromWebview('ready:');
-                if (mockWebSocket.onopen) {
-                    mockWebSocket.onopen();
-                }
-
-                mockWebSocket.send.mockClear();
-
-                const expression = 'document.execCommand("insertText", false, "test \\"quoted\\" content");';
-                const command = { id: 1, method: 'Runtime.evaluate', params: { expression } };
-                const message = `websocket:${JSON.stringify({ message: JSON.stringify(command) })}`;
-
-                socket.onMessageFromWebview(message);
-
-                expect(mockWebSocket.send).toHaveBeenCalledWith(JSON.stringify(command));
-            });
-
             it('should block Runtime.evaluate without expression', () => {
                 const socket = new PanelSocket(targetUrl, mockPostMessage);
 
@@ -632,6 +595,26 @@ describe('PanelSocket', () => {
 
                 // Injection attempt: extra code after execCommand
                 const expression = 'document.execCommand("insertText", false, "test"); alert(1);';
+                const command = { id: 1, method: 'Runtime.evaluate', params: { expression } };
+                const message = `websocket:${JSON.stringify({ message: JSON.stringify(command) })}`;
+
+                socket.onMessageFromWebview(message);
+
+                expect(mockWebSocket.send).not.toHaveBeenCalled();
+            });
+
+            it('should block Runtime.evaluate with execCommand insertText (use Input.insertText instead)', () => {
+                const socket = new PanelSocket(targetUrl, mockPostMessage);
+
+                socket.onMessageFromWebview('ready:');
+                if (mockWebSocket.onopen) {
+                    mockWebSocket.onopen();
+                }
+
+                mockWebSocket.send.mockClear();
+
+                // execCommand paste is no longer allowed - use Input.insertText instead
+                const expression = 'document.execCommand("insertText", false, "test content");';
                 const command = { id: 1, method: 'Runtime.evaluate', params: { expression } };
                 const message = `websocket:${JSON.stringify({ message: JSON.stringify(command) })}`;
 
