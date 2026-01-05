@@ -1,5 +1,6 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
+import * as http from 'http';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import {
@@ -30,6 +31,7 @@ export class ScreencastPanel {
     private static instances = new Map<string, ScreencastPanel>();
     private static instanceCounter = 0;
     private static onInstanceCountChanged: (() => void) | undefined;
+    private static onLastPanelClosed: (() => void) | undefined;
 
     private constructor(
         panelId: string,
@@ -56,6 +58,9 @@ export class ScreencastPanel {
 
         // Handle closing
         this.panel.onDidDispose(() => {
+            // Close the Edge tab before disposing
+            this.closeEdgeTab();
+
             this.dispose();
             this.panelSocket.dispose();
             this.recordEnumeratedHistogram('DevTools.ScreencastToggle', 0);
@@ -66,7 +71,8 @@ export class ScreencastPanel {
         // Handle view change
         this.panel.onDidChangeViewState(_e => {
             if (this.panel.visible) {
-                this.update();
+                // Activate the Edge tab when this panel becomes visible
+                this.activateEdgeTab();
             }
         }, this);
 
@@ -80,6 +86,9 @@ export class ScreencastPanel {
         }, this);
 
         this.recordEnumeratedHistogram('DevTools.ScreencastToggle', 1);
+        
+        // Initialize the webview HTML content
+        this.update();
     }
 
     private recordEnumeratedHistogram(actionName: string, actionCode: number) {
@@ -109,6 +118,12 @@ export class ScreencastPanel {
         if (ScreencastPanel.onInstanceCountChanged) {
             ScreencastPanel.onInstanceCountChanged();
         }
+
+        // If this was the last panel, notify extension to clean up browser
+        if (ScreencastPanel.instances.size === 0 && ScreencastPanel.onLastPanelClosed) {
+            console.warn('[ScreencastPanel] Last panel closed, notifying extension to close browser');
+            ScreencastPanel.onLastPanelClosed();
+        }
     }
 
     static getAllInstances(): Map<string, ScreencastPanel> {
@@ -117,6 +132,10 @@ export class ScreencastPanel {
 
     static setInstanceCountChangedCallback(callback: () => void): void {
         ScreencastPanel.onInstanceCountChanged = callback;
+    }
+
+    static setLastPanelClosedCallback(callback: () => void): void {
+        ScreencastPanel.onLastPanelClosed = callback;
     }
 
     reveal(): void {
@@ -219,6 +238,76 @@ export class ScreencastPanel {
             ? this.extractFriendlyName(this.currentPageUrl)
             : 'Browser';
         this.panel.title = `Browser ${this.instanceNumber}: ${friendlyName}`;
+    }
+
+    private extractTargetId(): string | null {
+        try {
+            // Extract target ID from WebSocket URL
+            // Format: ws://localhost:9222/devtools/page/{targetId}
+            const url = new URL(this.targetUrl);
+            const pathParts = url.pathname.split('/');
+            // Target ID is the last part of the path
+            const targetId = pathParts[pathParts.length - 1];
+            return targetId || null;
+        } catch {
+            return null;
+        }
+    }
+
+    private activateEdgeTab(): void {
+        const targetId = this.extractTargetId();
+        if (!targetId) {
+            return;
+        }
+
+        try {
+            // Extract hostname and port from WebSocket URL
+            const url = new URL(this.targetUrl);
+            const hostname = url.hostname;
+            const port = url.port;
+
+            // Use HTTP endpoint to activate the target (browser-level command)
+            // GET /json/activate/{targetId}
+            const req = http.get(`http://${hostname}:${port}/json/activate/${targetId}`, res => {
+                if (res.statusCode !== 200) {
+                    console.warn(`[ScreencastPanel] Failed to activate tab ${targetId}: HTTP ${res.statusCode}`);
+                }
+            });
+
+            req.on('error', err => {
+                console.error(`[ScreencastPanel] Error activating tab ${targetId}:`, err);
+            });
+        } catch (error) {
+            console.error('[ScreencastPanel] Error in activateEdgeTab:', error);
+        }
+    }
+
+    private closeEdgeTab(): void {
+        const targetId = this.extractTargetId();
+        if (!targetId) {
+            return;
+        }
+
+        try {
+            // Extract hostname and port from WebSocket URL
+            const url = new URL(this.targetUrl);
+            const hostname = url.hostname;
+            const port = url.port;
+
+            // Use HTTP endpoint to close the target (browser-level command)
+            // GET /json/close/{targetId}
+            const req = http.get(`http://${hostname}:${port}/json/close/${targetId}`, res => {
+                if (res.statusCode !== 200) {
+                    console.warn(`[ScreencastPanel] Failed to close tab ${targetId}: HTTP ${res.statusCode}`);
+                }
+            });
+
+            req.on('error', err => {
+                console.error(`[ScreencastPanel] Error closing tab ${targetId}:`, err);
+            });
+        } catch (error) {
+            console.error('[ScreencastPanel] Error in closeEdgeTab:', error);
+        }
     }
 
     static createOrShow(context: vscode.ExtensionContext,

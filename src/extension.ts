@@ -32,6 +32,10 @@ let telemetryReporter: Readonly<TelemetryReporter>;
 const browserInstances = new Map<string, Browser>();
 let browserStatusBarItem: vscode.StatusBarItem;
 
+// Shared browser instance for creating multiple tabs
+let sharedBrowserInstance: Browser | null = null;
+let sharedBrowserPort: number | null = null;
+
 async function newBrowserWindow(context: vscode.ExtensionContext): Promise<void> {
     const url = await vscode.window.showInputBox({
         prompt: 'Enter URL to open',
@@ -214,6 +218,18 @@ export function activate(context: vscode.ExtensionContext): void {
     // Register callback to update status bar when instance count changes
     ScreencastPanel.setInstanceCountChangedCallback(() => updateBrowserStatusBar());
 
+    // Register callback to close browser when last panel closes
+    ScreencastPanel.setLastPanelClosedCallback(() => {
+        console.warn('[Extension] Last panel closed, closing shared browser instance');
+        if (sharedBrowserInstance) {
+            sharedBrowserInstance.close().catch(err => {
+                console.error('[Extension] Error closing shared browser:', err);
+            });
+            sharedBrowserInstance = null;
+            sharedBrowserPort = null;
+        }
+    });
+
     context.subscriptions.push(vscode.commands.registerCommand(`${SETTINGS_STORE_NAME}.attach`, (): void => {
         void attach(context);
     }));
@@ -253,7 +269,6 @@ export function activate(context: vscode.ExtensionContext): void {
         void navigateBrowser(context);
     }));
 
-    void vscode.commands.executeCommand('setContext', 'titleCommandsRegistered', true);
     void reportFileExtensionTypes(telemetryReporter);
     reportExtensionSettings(telemetryReporter);
     vscode.workspace.onDidChangeConfiguration(event => reportChangedExtensionSetting(event, telemetryReporter));
@@ -272,22 +287,23 @@ export async function launchHtml(context: vscode.ExtensionContext, fileUri: vsco
         ? `file://${fileUri.fsPath}`
         : `file://${vscode.env.remoteName}.localhost/${fileUri.authority.split('+')[1]}/${fileUri.fsPath.replace(/\\/g, '/')}`;
 
-    const { port, userDataDir } = getRemoteEndpointSettings();
+    const { userDataDir } = getRemoteEndpointSettings();
     const browserPath = await getBrowserPath();
-    const browser = await launchBrowser(browserPath, port, url, userDataDir, /** headless */ false);
+    // Use port 0 to let the OS assign a random available port for each browser instance
+    const browser = await launchBrowser(browserPath, 0, url, userDataDir, /** headless */ false);
     browserInstances.set(url, browser);
 
-    // Get the websocket URL from the launched browser
+    // Get the websocket URL directly from the launched browser
     if (browser) {
-        const pages = await browser.pages();
-        if (pages && pages.length > 0) {
-            const page = pages[0];
-            const target = page.target();
-            const session = await target.createCDPSession();
-            const targetInfo = await session.send('Target.getTargetInfo');
-            if (targetInfo && targetInfo.targetInfo) {
-                await attach(context, url, undefined, false);
-            }
+        // Get the browser's WebSocket endpoint to extract the port
+        const browserWsEndpoint = browser.wsEndpoint();
+        // Extract port from ws://localhost:PORT/devtools/browser/...
+        const portMatch = browserWsEndpoint.match(/:(\d+)\//);
+        if (portMatch) {
+            const actualPort = parseInt(portMatch[1], 10);
+            // Now use the actual port to get the target
+            // IMPORTANT: CDP endpoint always uses HTTP, never HTTPS
+            await attach(context, url, {port: actualPort, useHttps: false}, false);
         }
     }
 }
@@ -305,11 +321,25 @@ export async function launchScreencast(context: vscode.ExtensionContext, fileUri
         ? `file://${fileUri.fsPath}`
         : `file://${vscode.env.remoteName}.localhost/${fileUri.authority.split('+')[1]}/${fileUri.fsPath.replace(/\\/g, '/')}`;
 
-    const { port, userDataDir } = getRemoteEndpointSettings();
+    const { userDataDir } = getRemoteEndpointSettings();
     const browserPath = await getBrowserPath();
-    const browser = await launchBrowser(browserPath, port, url, userDataDir, /** headless */ true);
+    // Use port 0 to let the OS assign a random available port for each browser instance
+    const browser = await launchBrowser(browserPath, 0, url, userDataDir, /** headless */ true);
     browserInstances.set(url, browser);
-    await attach(context, url, undefined, true);
+
+    // Get the websocket URL directly from the launched browser
+    if (browser) {
+        // Get the browser's WebSocket endpoint to extract the port
+        const browserWsEndpoint = browser.wsEndpoint();
+        // Extract port from ws://localhost:PORT/devtools/browser/...
+        const portMatch = browserWsEndpoint.match(/:(\d+)\//);
+        if (portMatch) {
+            const actualPort = parseInt(portMatch[1], 10);
+            // Now use the actual port to get the target
+            // IMPORTANT: CDP endpoint always uses HTTP, never HTTPS
+            await attach(context, url, {port: actualPort, useHttps: false}, true);
+        }
+    }
 }
 
 export function deactivate(): void {
@@ -325,6 +355,8 @@ export async function attach(
     const telemetryProps = { viaConfig: `${!!config}`, withTargetUrl: `${!!attachUrl}` };
     const { hostname, port, useHttps, timeout } = getRemoteEndpointSettings(config);
 
+    console.warn(`[Edge Attach] Starting attach - hostname: ${hostname}, port: ${port}, useHttps: ${useHttps}, attachUrl: ${attachUrl}, timeout: ${timeout}ms`);
+
     // Get the attach target and keep trying until reaching timeout
     const startTime = Date.now();
     let responseArray: IRemoteTargetJson[] = [];
@@ -332,23 +364,32 @@ export async function attach(
     do {
         try {
             // Keep trying to attach to the list endpoint until timeout
+            console.warn(`[Edge Attach] Calling getListOfTargets for ${hostname}:${port}...`);
             responseArray = await debugCore.utils.retryAsync(
                 () => getListOfTargets(hostname, port, useHttps),
                 timeout,
                 /* intervalDelay=*/ SETTINGS_DEFAULT_ATTACH_INTERVAL) as IRemoteTargetJson[];
+            console.warn(`[Edge Attach] Got ${responseArray.length} targets`);
         } catch (e) {
+            console.error(`[Edge Attach] Exception while getting targets:`, e);
             exceptionStack = e;
         }
 
         if (responseArray.length > 0) {
             // Try to match the given target with the list of targets we received from the endpoint
+            console.warn(`[Edge Attach] Found ${responseArray.length} targets. Available URLs:`,
+                responseArray.map(t => ({ title: t.title, url: t.url, type: t.type })));
+
             let targetWebsocketUrl = '';
             if (attachUrl) {
+                console.warn(`[Edge Attach] Trying to match target with URL: ${attachUrl}`);
                 // Match the targets using the edge debug adapter logic
                 let matchedTargets: debugCore.chromeConnection.ITarget[] | undefined;
                 try {
                     matchedTargets = debugCore.chromeUtils.getMatchingTargets(responseArray as unknown as debugCore.chromeConnection.ITarget[], attachUrl);
+                    console.warn(`[Edge Attach] getMatchingTargets returned ${matchedTargets?.length || 0} matches`);
                 } catch (e) {
+                    console.error(`[Edge Attach] Error in getMatchingTargets:`, e);
                     void ErrorReporter.showErrorDialog({
                         errorCode: ErrorCodes.Error,
                         title: 'Error while getting a debug connection to the target',
@@ -361,8 +402,12 @@ export async function attach(
                 if (matchedTargets && matchedTargets.length > 0 && matchedTargets[0].webSocketDebuggerUrl) {
                     const actualTarget = fixRemoteWebSocket(hostname, port, matchedTargets[0] as unknown as IRemoteTargetJson);
                     targetWebsocketUrl = actualTarget.webSocketDebuggerUrl;
+                    console.warn(`[Edge Attach] Matched target, WebSocket URL: ${targetWebsocketUrl}`);
                 } else if (!useRetry) {
+                    console.warn(`[Edge Attach] No matching targets found for ${attachUrl}, useRetry=${useRetry}`);
                     void vscode.window.showErrorMessage(`Couldn't attach to ${attachUrl}.`);
+                } else {
+                    console.warn(`[Edge Attach] No matching targets found for ${attachUrl}, will retry (useRetry=${useRetry})`);
                 }
             }
 
@@ -424,14 +469,23 @@ export async function launch(context: vscode.ExtensionContext, launchUrl?: strin
     const telemetryProps = { viaConfig: `${!!config}`, browserType, isHeadless};
     telemetryReporter.sendTelemetryEvent('command/launch', telemetryProps);
 
-    const { hostname, port, defaultUrl, userDataDir } = getRemoteEndpointSettings(config);
+    const { hostname, defaultUrl, userDataDir } = getRemoteEndpointSettings(config);
     const url = launchUrl || defaultUrl;
-    const target = await openNewTab(hostname, port, url);
-    if (target && target.webSocketDebuggerUrl) {
-        // Show the devtools
-        telemetryReporter.sendTelemetryEvent('command/launch/devtools', telemetryProps);
-        ScreencastPanel.createOrShow(context, telemetryReporter, target.webSocketDebuggerUrl);
-    } else {
+
+    // Try to reuse existing browser instance by creating a new tab
+    if (sharedBrowserInstance && sharedBrowserPort) {
+        console.warn(`[Edge Launch] Reusing existing browser on port ${sharedBrowserPort}, creating new tab for: ${url}`);
+        const target = await openNewTab(hostname, sharedBrowserPort, url);
+        if (target && target.webSocketDebuggerUrl) {
+            telemetryReporter.sendTelemetryEvent('command/launch/reused_browser', telemetryProps);
+            ScreencastPanel.createOrShow(context, telemetryReporter, target.webSocketDebuggerUrl);
+            return;
+        }
+        console.warn(`[Edge Launch] Failed to create new tab in existing browser, will launch new browser`);
+    }
+
+    // No existing browser or failed to create tab, launch a new browser instance
+    {
         // Launch a new instance
         const browserPath = await getBrowserPath(config);
         if (!browserPath) {
@@ -454,7 +508,8 @@ export async function launch(context: vscode.ExtensionContext, launchUrl?: strin
             const browserProps = { exe: `${knownBrowser?.toLowerCase()}` };
             telemetryReporter.sendTelemetryEvent('command/launch/browser', browserProps);
 
-        const browser = await launchBrowser(browserPath, port, url, userDataDir);
+        // Use port 0 to let the OS assign a random available port
+        const browser = await launchBrowser(browserPath, 0, url, userDataDir);
         browserInstances.set(url, browser);
         if (url !== SETTINGS_DEFAULT_URL) {
             reportUrlType(url, telemetryReporter);
@@ -464,6 +519,49 @@ export async function launch(context: vscode.ExtensionContext, launchUrl?: strin
                 reportUrlType(target.url(), telemetryReporter);
             }
         });
-        await attach(context, url, config);
+
+        // Get the websocket URL directly from the launched browser
+        // Get the browser's WebSocket endpoint to extract the port
+        const browserWsEndpoint = browser.wsEndpoint();
+        console.warn(`[Edge Launch] Browser WebSocket endpoint: ${browserWsEndpoint}`);
+
+        // Extract port from ws://localhost:PORT/devtools/browser/...
+        const portMatch = browserWsEndpoint.match(/:(\d+)\//);
+        if (portMatch) {
+            const actualPort = parseInt(portMatch[1], 10);
+            console.warn(`[Edge Launch] Extracted port: ${actualPort}, will attach to target: ${url}`);
+
+            // Save as shared browser instance for reuse
+            if (!sharedBrowserInstance) {
+                sharedBrowserInstance = browser;
+                sharedBrowserPort = actualPort;
+                console.warn(`[Edge Launch] Saved as shared browser instance on port ${actualPort}`);
+
+                // Clean up when browser closes
+                browser.on('disconnected', () => {
+                    console.warn(`[Edge Launch] Shared browser disconnected, clearing shared instance`);
+                    sharedBrowserInstance = null;
+                    sharedBrowserPort = null;
+                });
+            }
+
+            // Wait a moment for the browser's CDP endpoint to fully initialize
+            // Even though puppeteer says the browser is ready, the /json/list endpoint
+            // needs a moment to register page targets
+            console.warn(`[Edge Launch] Waiting 1 second for CDP endpoint to initialize...`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            // Now use the actual port to get the target
+            // IMPORTANT: CDP endpoint always uses HTTP, never HTTPS, even if the target URL is HTTPS
+            const attachConfig = {...config, port: actualPort, useHttps: false};
+            console.warn(`[Edge Launch] Calling attach with port ${actualPort}, config:`, attachConfig);
+            await attach(context, url, attachConfig, true);
+        } else {
+            console.error(`[Edge Launch] Failed to extract port from WebSocket endpoint: ${browserWsEndpoint}`);
+            void vscode.window.showErrorMessage(
+                `Failed to extract debugging port from browser. WebSocket endpoint: ${browserWsEndpoint}`
+            );
+            telemetryReporter.sendTelemetryEvent('command/launch/error/port_extraction_failed', telemetryProps);
+        }
     }
 }

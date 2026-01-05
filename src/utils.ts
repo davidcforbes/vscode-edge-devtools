@@ -216,13 +216,20 @@ export async function getListOfTargets(hostname: string, port: number, useHttps:
     const protocol = (useHttps ? 'https' : 'http');
 
     let jsonResponse = null;
+    let lastError: unknown = null;
     for (const endpoint of ['/json/list', '/json']) {
         try {
-            jsonResponse = await checkDiscoveryEndpoint(`${protocol}://${hostname}:${port}${endpoint}`);
+            const uri = `${protocol}://${hostname}:${port}${endpoint}`;
+            console.warn(`[getListOfTargets] Trying ${uri}...`);
+            jsonResponse = await checkDiscoveryEndpoint(uri);
             if (jsonResponse) {
+                console.warn(`[getListOfTargets] Got response from ${uri} (${jsonResponse.length} bytes)`);
                 break;
             }
-        } catch {
+            console.warn(`[getListOfTargets] No response from ${uri}`);
+        } catch (e) {
+            console.warn(`[getListOfTargets] Error fetching ${protocol}://${hostname}:${port}${endpoint}:`, e);
+            lastError = e;
             // localhost might not be ready as the user might not have a server running
             // user may also have changed settings making the endpoint invalid
         }
@@ -231,13 +238,20 @@ export async function getListOfTargets(hostname: string, port: number, useHttps:
     let result: IRemoteTargetJson[] = [];
     try {
         result = jsonResponse ? JSON.parse(jsonResponse) as IRemoteTargetJson[] : [];
+        console.warn(`[getListOfTargets] Parsed ${result.length} targets`);
     } catch (e) {
+        console.error(`[getListOfTargets] Error parsing JSON response:`, e);
         void ErrorReporter.showErrorDialog({
             errorCode: ErrorCodes.Error,
             title: 'Error while parsing the list of targets.',
             message: e instanceof Error && e.message ? e.message : `Unexpected error ${e}`,
         });
     }
+
+    if (result.length === 0 && lastError) {
+        console.warn(`[getListOfTargets] Returning empty array, last error was:`, lastError);
+    }
+
     return result;
 }
 
@@ -248,9 +262,12 @@ export async function getListOfTargets(hostname: string, port: number, useHttps:
  */
 export function getRemoteEndpointSettings(config: Partial<IUserConfig> = {}): IDevToolsSettings {
     const settings = vscode.workspace.getConfiguration(SETTINGS_STORE_NAME);
+    console.warn(`[getRemoteEndpointSettings] Input config:`, config);
+    console.warn(`[getRemoteEndpointSettings] config.useHttps = ${config.useHttps}, settings.get('useHttps') = ${settings.get('useHttps')}, SETTINGS_DEFAULT_USE_HTTPS = ${SETTINGS_DEFAULT_USE_HTTPS}`);
     const hostname: string = config.hostname || settings.get('hostname') || SETTINGS_DEFAULT_HOSTNAME;
-    const port: number = config.port || settings.get('port') || SETTINGS_DEFAULT_PORT;
-    const useHttps: boolean = config.useHttps || settings.get('useHttps') || SETTINGS_DEFAULT_USE_HTTPS;
+    const port: number = config.port ?? settings.get('port') ?? SETTINGS_DEFAULT_PORT;
+    const useHttps: boolean = config.useHttps ?? settings.get('useHttps') ?? SETTINGS_DEFAULT_USE_HTTPS;
+    console.warn(`[getRemoteEndpointSettings] Result: hostname=${hostname}, port=${port}, useHttps=${useHttps}`);
     const defaultUrl: string = config.url || settings.get('defaultUrl') || SETTINGS_DEFAULT_URL;
     const timeout: number = config.timeout || settings.get('timeout') || SETTINGS_DEFAULT_ATTACH_TIMEOUT;
 
@@ -389,6 +406,8 @@ export async function launchBrowser(browserPath: string, port: number, targetUrl
         '--no-first-run',
         '--no-default-browser-check',
         `--remote-debugging-port=${port}`,
+        '--disable-features=ProcessPerSiteUpToMainFrameThreshold', // Prevent process sharing between instances
+        '--no-sandbox', // Ensure separate processes
         targetUrl,
     ];
 

@@ -374,7 +374,14 @@ export class Screencast {
     }
 
     private onScreencastVisibilityChanged({visible}: {visible: boolean}): void {
-        this.inactiveOverlay.hidden = visible;
+        // Always keep overlay hidden to support multiple panels
+        // Interaction blocking is handled by VS Code panel focus
+        this.inactiveOverlay.hidden = true;
+        
+        // When tab becomes visible, restart screencast to ensure frames are sent
+        if (visible) {
+            this.updateScreencast();
+        }
     }
 
     private onToggleInspect({ enabled }: any): void {
