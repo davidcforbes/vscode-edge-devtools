@@ -584,14 +584,21 @@ export async function launch(context: vscode.ExtensionContext, launchUrl?: strin
 
     // Try to reuse existing browser instance by creating a new tab
     if (sharedBrowserInstance && sharedBrowserPort) {
-        console.warn(`[Edge Launch] Reusing existing browser on port ${sharedBrowserPort}, creating new tab for: ${url}`);
-        const target = await openNewTab(hostname, sharedBrowserPort, url);
-        if (target && target.webSocketDebuggerUrl) {
-            telemetryReporter.sendTelemetryEvent('command/launch/reused_browser', telemetryProps);
-            ScreencastPanel.createOrShow(context, telemetryReporter, target.webSocketDebuggerUrl);
-            return;
+        // Verify browser is still alive before attempting reuse
+        if (!sharedBrowserInstance.isConnected()) {
+            console.warn(`[Edge Launch] Shared browser instance is no longer connected, clearing stale reference`);
+            sharedBrowserInstance = null;
+            sharedBrowserPort = null;
+        } else {
+            console.warn(`[Edge Launch] Reusing existing browser on port ${sharedBrowserPort}, creating new tab for: ${url}`);
+            const target = await openNewTab(hostname, sharedBrowserPort, url);
+            if (target && target.webSocketDebuggerUrl) {
+                telemetryReporter.sendTelemetryEvent('command/launch/reused_browser', telemetryProps);
+                ScreencastPanel.createOrShow(context, telemetryReporter, target.webSocketDebuggerUrl);
+                return;
+            }
+            console.warn(`[Edge Launch] Failed to create new tab in existing browser, will launch new browser`);
         }
-        console.warn(`[Edge Launch] Failed to create new tab in existing browser, will launch new browser`);
     }
 
     // No existing browser or failed to create tab, launch a new browser instance

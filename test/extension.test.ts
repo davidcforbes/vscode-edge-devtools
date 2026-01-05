@@ -357,6 +357,7 @@ describe("extension", () => {
                 getRuntimeConfig: jest.fn().mockReturnValue(fakeRuntimeConfig),
                 launchBrowser: jest.fn().mockResolvedValue(fakeBrowser),
                 openNewTab: jest.fn().mockResolvedValue(null),
+                retryAsync: jest.fn().mockImplementation((fn) => fn()) as any,
                 buttonCode: { launch: '' },
                 reportChangedExtensionSetting: jest.fn(),
                 reportExtensionSettings: jest.fn(),
