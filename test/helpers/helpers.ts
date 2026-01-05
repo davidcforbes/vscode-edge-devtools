@@ -212,6 +212,8 @@ export function createFakeGet(getResponse: () => string, getStatusCode: () => nu
         callback(resp);
         return {
             on: jest.fn(),
+            setTimeout: jest.fn(),
+            destroy: jest.fn(),
         };
     };
 

@@ -77,17 +77,20 @@ describe("utils", () => {
             expect(fake.on).toHaveBeenNthCalledWith(2, "end", expect.any(Function));
         });
 
-        it("options passed to 'get' uses PUT as HTTP verb", async () => {
-            // Chrome headless require 'PUT' instead of 'GET' for /json/new otherwise we get
-            // 'Using unsafe HTTP verb GET to invoke /json/new. The recommended way is to use PUT'
+        it("options passed to 'get' uses GET as HTTP verb", async () => {
+            // fetchUri defaults to GET for read-only endpoints like /json/list
             const httpGetMock = mockGetHttp;
             const customError = new Error('customError');
             const fakeGet = (_options: any, callback: (resp: object) => void) => {
                 expect(_options.method).not.toBeUndefined();
-                expect(_options.method).toEqual('PUT');
+                expect(_options.method).toEqual('GET');
 
                 // after validation we can halt execution to resolve the promise chain.
-                return { on: () => { throw customError } }
+                return {
+                    on: () => { throw customError; },
+                    setTimeout: jest.fn(),
+                    destroy: jest.fn(),
+                };
             };
 
             httpGetMock.mockImplementation(fakeGet);
@@ -125,6 +128,8 @@ describe("utils", () => {
             httpGetMock.mockImplementationOnce((_options: object, _callback: (resp: object) => void) => {
                 return {
                     on: mockOnReturn,
+                    setTimeout: jest.fn(),
+                    destroy: jest.fn(),
                 };
             });
 
@@ -302,7 +307,7 @@ describe("utils", () => {
                 hostname: "someHost",
                 port: 9999,
                 useHttps: true,
-                userDataDir: "default",
+                userDataDir: "/tmp/vscode-edge-devtools-default",
             };
 
             // Override the configuration mock to return our custom test values
@@ -310,6 +315,7 @@ describe("utils", () => {
                 get: (name: string) => (expected as any)[name],
             };
             const vscodeMock = await jest.requireMock("vscode");
+            vscodeMock.window.showWarningMessage.mockResolvedValueOnce("Connect Anyway");
             vscodeMock.workspace.getConfiguration.mockImplementationOnce(() => configMock);
 
             // Ensure the new values are returned
@@ -329,9 +335,11 @@ describe("utils", () => {
                 port: 9999,
                 url: "url",
                 useHttps: true,
-                userDataDir: "default",
+                userDataDir: "/tmp/vscode-edge-devtools-user-config",
             };
 
+            const vscodeMock = await jest.requireMock("vscode");
+            vscodeMock.window.showWarningMessage.mockResolvedValueOnce("Connect Anyway");
             const { hostname, port, useHttps, defaultUrl, userDataDir } = await utils.getRemoteEndpointSettings(config);
             expect(hostname).toBe(config.hostname);
             expect(port).toBe(config.port);
@@ -372,12 +380,12 @@ describe("utils", () => {
             expect(result2.userDataDir).toBe("");
 
             // A path should use that path
-            config.userDataDir = "this is a path";
+            config.userDataDir = "/tmp/vscode-edge-devtools-profile";
             const result3 = await utils.getRemoteEndpointSettings(config);
             expect(result3.userDataDir).toBe(config.userDataDir);
 
             // Settings should be used if there is no config
-            const expectedSettingDir = "some/path";
+            const expectedSettingDir = "/tmp/vscode-edge-devtools-settings-profile";
             const configMock = {
                 get: (name: string) => expectedSettingDir as string | undefined,
             };
@@ -597,6 +605,7 @@ describe("utils", () => {
                         "--no-first-run",
                         "--no-default-browser-check",
                         `--remote-debugging-port=${expectedPort}`,
+                        "--disable-features=ProcessPerSiteUpToMainFrameThreshold",
                         expectedUrl,
                     ],
                     executablePath,
@@ -611,6 +620,7 @@ describe("utils", () => {
                         "--no-first-run",
                         "--no-default-browser-check",
                         `--remote-debugging-port=${expectedPort}`,
+                        "--disable-features=ProcessPerSiteUpToMainFrameThreshold",
                         expectedUrl,
                     ],
                     executablePath,
@@ -648,6 +658,7 @@ describe("utils", () => {
                         "--no-first-run",
                         "--no-default-browser-check",
                         `--remote-debugging-port=${expectedPort}`,
+                        "--disable-features=ProcessPerSiteUpToMainFrameThreshold",
                         expectedUrl,
                     ],
                     executablePath,
@@ -850,7 +861,7 @@ describe("utils", () => {
         it('correctly records all changed extension settings', async () => {
             const reporter = createFakeTelemetryReporter();
             utils.reportExtensionSettings(reporter);
-            expect(reporter.sendTelemetryEvent).toHaveBeenCalledWith('user/settingsChangedAtLaunch', { isHeadless: 'false' });
+            expect(reporter.sendTelemetryEvent).toHaveBeenCalledWith('user/settingsChangedAtLaunch', { isHeadless: '<redacted>' });
         });
 
         it('correctly sends telemetry event for changed event', async () => {
@@ -863,7 +874,7 @@ describe("utils", () => {
                 }
             }};
             utils.reportChangedExtensionSetting(configurationChangedEvent, reporter);
-            expect(reporter.sendTelemetryEvent).toHaveBeenCalledWith('user/settingsChanged', { isHeadless: 'false' });
+            expect(reporter.sendTelemetryEvent).toHaveBeenCalledWith('user/settingsChanged', { isHeadless: '<redacted>' });
         });
     });
 

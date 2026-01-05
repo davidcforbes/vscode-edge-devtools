@@ -714,8 +714,8 @@ export async function launch(context: vscode.ExtensionContext, launchUrl?: strin
             // Wait a moment for the browser's CDP endpoint to fully initialize
             // Even though puppeteer says the browser is ready, the /json/list endpoint
             // needs a moment to register page targets
-            console.warn(`[Edge Launch] Waiting 1 second for CDP endpoint to initialize...`);
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            console.warn(`[Edge Launch] Waiting 500ms for CDP endpoint to initialize...`);
+            await new Promise(resolve => setTimeout(resolve, 500));
 
             // Now use the actual port to get the target
             // IMPORTANT: CDP endpoint always uses HTTP, never HTTPS, even if the target URL is HTTPS

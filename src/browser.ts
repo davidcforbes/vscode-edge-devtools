@@ -131,6 +131,13 @@ export function getBrowserArgs(): string[] {
         // Extract flag name (before = sign if present)
         const flagName = trimmed.split('=')[0];
 
+        // Special case: Allow --disable-blink-features=AutomationControlled for Cloudflare bypass
+        // This is safe as it only hides automation detection, not a security feature
+        if (trimmed === '--disable-blink-features=AutomationControlled') {
+            sanitized.push(trimmed);
+            continue;
+        }
+
         // Check if it's a dangerous flag
         if (DANGEROUS_FLAGS.has(flagName) || flagName.startsWith('--disable-')) {
             blockedDangerous.push(flagName);
@@ -207,6 +214,7 @@ export async function launchBrowser(browserPath: string, port: number, targetUrl
         '--no-default-browser-check',
         `--remote-debugging-port=${port}`,
         '--disable-features=ProcessPerSiteUpToMainFrameThreshold', // Prevent process sharing between instances
+        '--disable-blink-features=AutomationControlled', // Hide automation signals for Cloudflare bypass
         // REMOVED: --no-sandbox (SECURITY: This flag disables Chromium's security sandbox)
         // Sandbox is now enabled for better security. If you experience issues on Linux,
         // this may indicate missing kernel configurations (namespaces, seccomp).
