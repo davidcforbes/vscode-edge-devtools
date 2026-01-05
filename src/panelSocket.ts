@@ -63,6 +63,7 @@ export class PanelSocket extends EventEmitter {
     private readonly postMessageToDevTools: IDevToolsPostMessageCallback;
     protected socket: WebSocket | undefined;
     private isConnected = false;
+    private isConnecting = false;
     private messages: string[] = [];
     private commandIdCounter = 0;
 
@@ -97,6 +98,7 @@ export class PanelSocket extends EventEmitter {
 
     dispose(): void {
         if (this.socket) {
+            this.isConnecting = false;
             this.isConnected = false;
             this.socket.close();
             this.socket = undefined;
@@ -108,12 +110,15 @@ export class PanelSocket extends EventEmitter {
             this.dispose();
 
             // First message, so connect a real websocket to the target
-            this.connectToTarget();
+            // Only connect if not already connecting to prevent race conditions
+            if (!this.isConnecting) {
+                this.connectToTarget();
+            }
         }
 
         if (eventName === 'websocket') {
-            if (!this.socket) {
-                // Reconnect if we no longer have a websocket
+            if (!this.socket && !this.isConnecting) {
+                // Reconnect if we no longer have a websocket and not already connecting
                 this.connectToTarget();
             }
 
@@ -147,6 +152,9 @@ export class PanelSocket extends EventEmitter {
     }
 
     private connectToTarget(): void {
+        // Prevent concurrent connection attempts
+        this.isConnecting = true;
+
         // Create the websocket
         this.socket = new WebSocket(this.targetUrl);
         this.socket.onopen = () => this.onOpen();
@@ -156,6 +164,7 @@ export class PanelSocket extends EventEmitter {
     }
 
     protected onOpen(): void {
+        this.isConnecting = false;
         this.isConnected = true;
 
         this.postMessageToDevTools('open');
@@ -202,6 +211,8 @@ export class PanelSocket extends EventEmitter {
     }
 
     private onError() {
+        this.isConnecting = false;
+
         if (this.isConnected) {
             // Tell the devtools that there was a connection error
             this.postMessageToDevTools('error');
@@ -209,6 +220,8 @@ export class PanelSocket extends EventEmitter {
     }
 
     private onClose() {
+        this.isConnecting = false;
+
         if (this.isConnected) {
             // Tell the devtools that the real websocket was closed
             this.postMessageToDevTools('close');
