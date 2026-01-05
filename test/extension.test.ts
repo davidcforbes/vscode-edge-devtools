@@ -43,6 +43,9 @@ describe("extension", () => {
                 getRemoteEndpointSettings: jest.fn(),
                 getRuntimeConfig: jest.fn(),
                 launchBrowserWithTimeout: jest.fn().mockResolvedValue(mockBrowser),
+                retryAsync: jest.fn().mockImplementation((fn) => fn()) as any,
+                getMatchingTargets: jest.fn().mockReturnValue([]),
+                fixRemoteWebSocket: jest.fn(),
                 reportFileExtensionTypes: jest.fn().mockResolvedValue(undefined),
                 reportChangedExtensionSetting: jest.fn(),
                 reportExtensionSettings: jest.fn(),
@@ -122,7 +125,7 @@ describe("extension", () => {
                 userDataDir: "profile",
             });
             mockUtils.getListOfTargets!.mockResolvedValue([]);
-            attachCommand!();
+            await attachCommand!();
             expect(mockUtils.getListOfTargets).toHaveBeenCalled();
         });
 
@@ -167,6 +170,7 @@ describe("extension", () => {
                     }),
                     getRuntimeConfig: jest.fn().mockReturnValue(fakeRuntimeConfig),
                     retryAsync: jest.fn().mockImplementation((fn) => fn()) as any,
+                    getMatchingTargets: jest.fn().mockReturnValue([target]),
                 },
                 vscode: createFakeVSCode(),
             };
@@ -358,7 +362,11 @@ describe("extension", () => {
             mockUtils = {
                 createTelemetryReporter: jest.fn((_: ExtensionContext) => mockReporter),
                 getBrowserPath: jest.fn().mockResolvedValue("path"),
-                getListOfTargets: jest.fn().mockResolvedValue([]),
+                getListOfTargets: jest.fn().mockResolvedValue([{
+                    title: "title",
+                    url: "url",
+                    webSocketDebuggerUrl: "ws://localhost:9222",
+                }]),
                 getRemoteEndpointSettings: jest.fn().mockReturnValue({
                     hostname: "hostname",
                     port: "port",
@@ -371,6 +379,12 @@ describe("extension", () => {
                 openNewTab: jest.fn().mockResolvedValue(null),
                 retryAsync: jest.fn().mockImplementation((fn) => fn()) as any,
                 buttonCode: { launch: '' },
+                getMatchingTargets: jest.fn().mockReturnValue([{
+                    title: "title",
+                    url: "url",
+                    webSocketDebuggerUrl: "ws://localhost:9222",
+                }]),
+                fixRemoteWebSocket: jest.fn(),
                 reportChangedExtensionSetting: jest.fn(),
                 reportExtensionSettings: jest.fn(),
                 reportUrlType: jest.fn(),
@@ -383,6 +397,7 @@ describe("extension", () => {
                     getAllInstances: jest.fn(() => new Map()),
                     setInstanceCountChangedCallback: jest.fn(),
                     setLastPanelClosedCallback: jest.fn(),
+                    setPanelDisposedCallback: jest.fn(),
                 } as any,
             };
             mockVSCode = createFakeVSCode();
