@@ -18,7 +18,7 @@ export class ScreencastView {
           font-src ${webviewCSP};
           img-src 'self' data: ${webviewCSP};
           style-src 'self' 'unsafe-inline' ${webviewCSP};
-          script-src 'self' 'unsafe-eval' ${webviewCSP};
+          script-src 'self' ${webviewCSP};
           frame-src 'self' ${webviewCSP};
           connect-src 'self' data: ${webviewCSP};
       ">
