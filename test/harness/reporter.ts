@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+import * as fs from 'fs';
+import * as path from 'path';
 import { RunnerOptions, TestResult } from './types.js';
 
 /**
@@ -10,9 +12,14 @@ export class TestReporter {
     private results: TestResult[] = [];
     private startTime = 0;
     private suiteStartTime = 0;
+    private resultsPath?: string;
 
     constructor(private options: RunnerOptions) {
         this.startTime = Date.now();
+        if (options.logDir) {
+            fs.mkdirSync(options.logDir, { recursive: true });
+            this.resultsPath = path.join(options.logDir, 'test-results.json');
+        }
     }
 
     /**
@@ -106,6 +113,8 @@ export class TestReporter {
                 });
             console.log('');
         }
+
+        this.writeResults({ total, passed, failed, duration: totalDuration });
     }
 
     /**
@@ -141,5 +150,22 @@ export class TestReporter {
         const duration = Date.now() - this.startTime;
 
         return { total, passed, failed, duration };
+    }
+
+    private writeResults(stats: { total: number; passed: number; failed: number; duration: number }): void {
+        if (!this.resultsPath) {
+            return;
+        }
+
+        try {
+            const payload = {
+                stats,
+                results: this.results,
+            };
+            fs.writeFileSync(this.resultsPath, JSON.stringify(payload, null, 2), 'utf8');
+            console.log(`\n📝 Test results written to ${this.resultsPath}`);
+        } catch (error) {
+            console.warn('Failed to write test results:', error);
+        }
     }
 }

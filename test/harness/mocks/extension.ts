@@ -201,7 +201,11 @@ export class ExtensionMock extends EventEmitter {
                     return options?.value || '';
                 },
                 showErrorMessage: (message: string) => {
-                    this.emit('error', message);
+                    if (this.listenerCount('error') > 0) {
+                        this.emit('error', message);
+                    } else {
+                        console.warn(`[ExtensionMock] showErrorMessage: ${message}`);
+                    }
                     return Promise.resolve(undefined);
                 },
                 showInformationMessage: (message: string) => {

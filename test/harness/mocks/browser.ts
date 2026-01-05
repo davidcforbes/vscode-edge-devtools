@@ -2,6 +2,8 @@
 // Licensed under the MIT License.
 
 import { EventEmitter } from 'events';
+import * as fs from 'fs';
+import * as path from 'path';
 import { WebSocketServer, WebSocket } from 'ws';
 
 export interface CDPMessage {
@@ -14,13 +16,17 @@ export interface CDPMessage {
 
 export class CDPTargetMock extends EventEmitter {
     private socket?: WebSocket;
+    private responseDelayMs = 0;
+    private logEvent?: (entry: unknown) => void;
 
     constructor(
         public id: string,
         public url: string,
-        public title = 'Test Page'
+        public title = 'Test Page',
+        logEvent?: (entry: unknown) => void
     ) {
         super();
+        this.logEvent = logEvent;
     }
 
     attachSocket(socket: WebSocket): void {
@@ -29,6 +35,12 @@ export class CDPTargetMock extends EventEmitter {
         socket.on('message', (data) => {
             try {
                 const message = JSON.parse(data.toString()) as CDPMessage;
+                this.logEvent?.({
+                    ts: Date.now(),
+                    direction: 'inbound',
+                    targetId: this.id,
+                    message,
+                });
                 this.handleCommand(message);
             } catch (error) {
                 console.error('Failed to parse CDP message:', error);
@@ -38,6 +50,10 @@ export class CDPTargetMock extends EventEmitter {
         socket.on('close', () => {
             this.socket = undefined;
         });
+    }
+
+    setResponseDelay(ms: number): void {
+        this.responseDelayMs = Math.max(0, ms);
     }
 
     private handleCommand(message: CDPMessage): void {
@@ -94,6 +110,19 @@ export class CDPTargetMock extends EventEmitter {
                 });
                 break;
 
+            case 'Page.startScreencast':
+                this.sendResponse(id, {});
+                this.sendEvent('Page.screencastFrame', {
+                    data: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=',
+                    metadata: { deviceWidth: 1, deviceHeight: 1 },
+                    sessionId: `session-${Date.now()}`,
+                });
+                break;
+
+            case 'Page.screencastFrameAck':
+                this.sendResponse(id, {});
+                break;
+
             case 'Runtime.evaluate':
                 this.sendResponse(id, {
                     result: {
@@ -137,13 +166,35 @@ export class CDPTargetMock extends EventEmitter {
 
     private sendResponse(id: number, result: unknown): void {
         if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-            this.socket.send(JSON.stringify({ id, result }));
+            this.logEvent?.({
+                ts: Date.now(),
+                direction: 'outbound',
+                targetId: this.id,
+                message: { id, result },
+            });
+            const send = () => this.socket?.send(JSON.stringify({ id, result }));
+            if (this.responseDelayMs > 0) {
+                setTimeout(send, this.responseDelayMs);
+            } else {
+                send();
+            }
         }
     }
 
     private sendEvent(method: string, params: unknown): void {
         if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-            this.socket.send(JSON.stringify({ method, params }));
+            this.logEvent?.({
+                ts: Date.now(),
+                direction: 'outbound',
+                targetId: this.id,
+                message: { method, params },
+            });
+            const send = () => this.socket?.send(JSON.stringify({ method, params }));
+            if (this.responseDelayMs > 0) {
+                setTimeout(send, this.responseDelayMs);
+            } else {
+                send();
+            }
         }
     }
 
@@ -153,12 +204,30 @@ export class CDPTargetMock extends EventEmitter {
     }
 }
 
+export interface BrowserMockOptions {
+    logDir?: string;
+}
+
 export class BrowserMock extends EventEmitter {
     private wsServer?: WebSocketServer;
     private cdpTargets: Map<string, CDPTargetMock> = new Map();
     public port = 9222;
+    private logStream?: fs.WriteStream;
+    private framesDir?: string;
+
+    constructor(private options: BrowserMockOptions = {}) {
+        super();
+    }
 
     async launch(): Promise<void> {
+        if (this.options.logDir) {
+            fs.mkdirSync(this.options.logDir, { recursive: true });
+            const logPath = path.join(this.options.logDir, 'cdp-trace.jsonl');
+            this.logStream = fs.createWriteStream(logPath, { flags: 'a' });
+            this.framesDir = path.join(this.options.logDir, 'screencast-frames');
+            fs.mkdirSync(this.framesDir, { recursive: true });
+        }
+
         // Start WebSocket server to simulate CDP endpoint
         this.wsServer = new WebSocketServer({ port: this.port });
 
@@ -184,7 +253,7 @@ export class BrowserMock extends EventEmitter {
 
     async createTarget(url: string, title = 'Test Page'): Promise<string> {
         const targetId = `target-${Date.now()}-${Math.random().toString(36).substring(7)}`;
-        const target = new CDPTargetMock(targetId, url, title);
+        const target = new CDPTargetMock(targetId, url, title, this.logEvent.bind(this));
         this.cdpTargets.set(targetId, target);
         this.emit('targetCreated', { targetId, url, title });
         return targetId;
@@ -196,6 +265,18 @@ export class BrowserMock extends EventEmitter {
             target.close();
             this.cdpTargets.delete(targetId);
             this.emit('targetClosed', { targetId });
+        }
+    }
+
+    setTargetResponseDelay(targetId: string, delayMs: number): void {
+        const target = this.cdpTargets.get(targetId);
+        target?.setResponseDelay(delayMs);
+    }
+
+    disconnectTarget(targetId: string): void {
+        const target = this.cdpTargets.get(targetId);
+        if (target) {
+            target.close();
         }
     }
 
@@ -215,6 +296,11 @@ export class BrowserMock extends EventEmitter {
                 });
             });
             this.wsServer = undefined;
+        }
+
+        if (this.logStream) {
+            this.logStream.end();
+            this.logStream = undefined;
         }
     }
 
@@ -236,5 +322,42 @@ export class BrowserMock extends EventEmitter {
         // Example: /devtools/page/target-123 -> target-123
         const match = url.match(/\/devtools\/page\/(.+?)(\?|$)/);
         return match ? match[1] : null;
+    }
+
+    private logEvent(entry: unknown): void {
+        if (!this.logStream) {
+            return;
+        }
+
+        try {
+            this.logStream.write(`${JSON.stringify(entry)}\n`);
+            this.tryWriteFrame(entry);
+        } catch (error) {
+            console.warn('Failed to write CDP trace entry:', error);
+        }
+    }
+
+    private tryWriteFrame(entry: unknown): void {
+        if (!this.framesDir) {
+            return;
+        }
+
+        const payload = entry as { message?: { method?: string; params?: { data?: string } } };
+        if (payload?.message?.method !== 'Page.screencastFrame') {
+            return;
+        }
+
+        const data = payload.message?.params?.data;
+        if (!data || typeof data !== 'string') {
+            return;
+        }
+
+        try {
+            const buffer = Buffer.from(data, 'base64');
+            const filename = `frame-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.png`;
+            fs.writeFileSync(path.join(this.framesDir, filename), buffer);
+        } catch (error) {
+            console.warn('Failed to write screencast frame:', error);
+        }
     }
 }

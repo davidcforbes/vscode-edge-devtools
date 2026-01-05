@@ -40,7 +40,7 @@ export class TestContext {
         await this.extensionMock.activate();
 
         // Initialize browser mock
-        this.browserMock = new BrowserMock();
+        this.browserMock = new BrowserMock({ logDir: this.options.logDir });
         await this.browserMock.launch();
     }
 

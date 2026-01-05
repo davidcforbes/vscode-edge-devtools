@@ -345,5 +345,6 @@ export class PanelSocket extends EventEmitter {
         }
 
         this.isConnected = false;
+        this.socket = undefined;
     }
 }

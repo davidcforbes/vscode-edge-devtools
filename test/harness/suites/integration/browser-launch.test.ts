@@ -44,8 +44,21 @@ export const suite: TestSuite = {
             }
         },
         {
+            name: 'should skip browser launch tests when SKIP_EDGE_LAUNCH is set',
+            async run() {
+                if (!process.env.SKIP_EDGE_LAUNCH) {
+                    return;
+                }
+                console.log('[Test] SKIP_EDGE_LAUNCH set - skipping launch tests that require Edge');
+            }
+        },
+        {
             name: 'should launch browser with default URL',
             async run(context) {
+                if (process.env.SKIP_EDGE_LAUNCH) {
+                    console.log('[Test] SKIP_EDGE_LAUNCH set - skipping browser launch test');
+                    return;
+                }
                 // Execute launch command with default URL
                 await context.extensionMock.executeCommand(
                     'vscode-edge-devtools.launch'
@@ -63,6 +76,10 @@ export const suite: TestSuite = {
         {
             name: 'should launch browser with custom URL',
             async run(context) {
+                if (process.env.SKIP_EDGE_LAUNCH) {
+                    console.log('[Test] SKIP_EDGE_LAUNCH set - skipping browser launch test');
+                    return;
+                }
                 const testUrl = 'http://localhost:8080';
 
                 // Execute launch command with custom URL
@@ -83,6 +100,10 @@ export const suite: TestSuite = {
         {
             name: 'should handle multiple browser instances',
             async run(context) {
+                if (process.env.SKIP_EDGE_LAUNCH) {
+                    console.log('[Test] SKIP_EDGE_LAUNCH set - skipping multi-instance launch test');
+                    return;
+                }
                 const urls = [
                     'http://localhost:8080',
                     'http://localhost:9000',
@@ -108,6 +129,10 @@ export const suite: TestSuite = {
         {
             name: 'should cleanup on browser close',
             async run(context) {
+                if (process.env.SKIP_EDGE_LAUNCH) {
+                    console.log('[Test] SKIP_EDGE_LAUNCH set - skipping browser cleanup test');
+                    return;
+                }
                 // Launch browser
                 await context.extensionMock.executeCommand(
                     'vscode-edge-devtools.launch',
@@ -137,6 +162,10 @@ export const suite: TestSuite = {
         {
             name: 'should execute newBrowserWindow command',
             async run(context) {
+                if (process.env.SKIP_EDGE_LAUNCH) {
+                    console.log('[Test] SKIP_EDGE_LAUNCH set - skipping newBrowserWindow test');
+                    return;
+                }
                 // Note: This command shows an input box, so it will use the default value from the mock
                 await context.extensionMock.executeCommand(
                     'vscode-edge-devtools.newBrowserWindow'
@@ -154,6 +183,10 @@ export const suite: TestSuite = {
         {
             name: 'should list open browsers when none exist',
             async run(context) {
+                if (process.env.SKIP_EDGE_LAUNCH) {
+                    console.log('[Test] SKIP_EDGE_LAUNCH set - skipping listOpenBrowsers test');
+                    return;
+                }
                 // Execute listOpenBrowsers with no open browsers
                 await context.extensionMock.executeCommand(
                     'vscode-edge-devtools.listOpenBrowsers'
@@ -166,6 +199,10 @@ export const suite: TestSuite = {
         {
             name: 'should list open browsers when some exist',
             async run(context) {
+                if (process.env.SKIP_EDGE_LAUNCH) {
+                    console.log('[Test] SKIP_EDGE_LAUNCH set - skipping listOpenBrowsers test');
+                    return;
+                }
                 // Launch a browser first
                 await context.extensionMock.executeCommand(
                     'vscode-edge-devtools.launch',
@@ -186,6 +223,10 @@ export const suite: TestSuite = {
         {
             name: 'should switch between browser instances',
             async run(context) {
+                if (process.env.SKIP_EDGE_LAUNCH) {
+                    console.log('[Test] SKIP_EDGE_LAUNCH set - skipping switchToBrowser test');
+                    return;
+                }
                 // Launch two browsers
                 await context.extensionMock.executeCommand(
                     'vscode-edge-devtools.launch',
@@ -216,6 +257,10 @@ export const suite: TestSuite = {
         {
             name: 'should close current browser when only one exists',
             async run(context) {
+                if (process.env.SKIP_EDGE_LAUNCH) {
+                    console.log('[Test] SKIP_EDGE_LAUNCH set - skipping closeCurrentBrowser test');
+                    return;
+                }
                 // Launch one browser
                 await context.extensionMock.executeCommand(
                     'vscode-edge-devtools.launch',
@@ -241,6 +286,10 @@ export const suite: TestSuite = {
         {
             name: 'should close selected browser when multiple exist',
             async run(context) {
+                if (process.env.SKIP_EDGE_LAUNCH) {
+                    console.log('[Test] SKIP_EDGE_LAUNCH set - skipping closeCurrentBrowser test');
+                    return;
+                }
                 // Launch two browsers
                 await context.extensionMock.executeCommand(
                     'vscode-edge-devtools.launch',

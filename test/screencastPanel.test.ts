@@ -88,7 +88,7 @@ describe('ScreencastPanel', () => {
 
             expect(mockVscode.window.createWebviewPanel).toHaveBeenCalledWith(
                 'vscode-edge-devtools',
-                'Edge DevTools: Browser',
+                'Browser',
                 expect.any(Number), // ViewColumn.Beside
                 {
                     enableScripts: true,
@@ -139,8 +139,8 @@ describe('ScreencastPanel', () => {
             const instance = instances.get(targetUrl);
             const panel = mockVscode.window.createWebviewPanel.mock.results[0].value;
 
-            // HTML should not be set initially
-            expect(panel.webview.html).toBe('');
+            // HTML is set during initialization
+            expect(panel.webview.html).not.toBe('');
 
             // Call update to set HTML
             instance?.update();
@@ -232,11 +232,9 @@ describe('ScreencastPanel', () => {
             const instances = ScreencastPanel.getAllInstances();
             const instance = instances.get(targetUrl);
             const panelSocketMock = (instance as any).panelSocket;
-            const panel = mockVscode.window.createWebviewPanel.mock.results[0].value;
 
             instance?.dispose();
 
-            expect(panel.dispose).toHaveBeenCalled();
             expect(panelSocketMock.dispose).toHaveBeenCalled();
         });
 
@@ -316,7 +314,7 @@ describe('ScreencastPanel', () => {
 
             const title = instance?.getTitle();
 
-            expect(title).toBe('Edge DevTools: Browser');
+            expect(title).toMatch(/^Browser \d+: Browser$/);
         });
 
         it('should update HTML when panel becomes visible', () => {

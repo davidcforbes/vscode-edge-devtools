@@ -23,12 +23,17 @@ describe("extension", () => {
         let context: ExtensionContext;
         let commandMock: jest.Mock;
         let mockUtils: Partial<Mocked<typeof import("../src/utils")>>;
+        let mockBrowser: { wsEndpoint: jest.Mock; on: jest.Mock };
 
         beforeEach(() => {
             // Initialize a fake context
             context = createFakeExtensionContext();
 
             // Mock out the imported utils
+            mockBrowser = {
+                wsEndpoint: jest.fn(() => "ws://localhost:9222/devtools/browser/123"),
+                on: jest.fn(),
+            };
             mockUtils = {
                 buttonCode,
                 SETTINGS_STORE_NAME,
@@ -37,6 +42,7 @@ describe("extension", () => {
                 getListOfTargets: jest.fn().mockReturnValue([]),
                 getRemoteEndpointSettings: jest.fn(),
                 getRuntimeConfig: jest.fn(),
+                launchBrowserWithTimeout: jest.fn().mockResolvedValue(mockBrowser),
                 reportFileExtensionTypes: jest.fn(),
                 reportChangedExtensionSetting: jest.fn(),
                 reportExtensionSettings: jest.fn(),
@@ -326,7 +332,8 @@ describe("extension", () => {
 
     describe("launch", () => {
         const fakeBrowser = {
-            on: () => null,
+            on: jest.fn(),
+            wsEndpoint: jest.fn(() => "ws://localhost:9222/devtools/browser/123"),
             pages: jest.fn().mockResolvedValue([{
                 target: () => ({
                     createCDPSession: () => ({
@@ -355,7 +362,7 @@ describe("extension", () => {
                     userDataDir: "profile"
                 }),
                 getRuntimeConfig: jest.fn().mockReturnValue(fakeRuntimeConfig),
-                launchBrowser: jest.fn().mockResolvedValue(fakeBrowser),
+                launchBrowserWithTimeout: jest.fn().mockResolvedValue(fakeBrowser),
                 openNewTab: jest.fn().mockResolvedValue(null),
                 retryAsync: jest.fn().mockImplementation((fn) => fn()) as any,
                 buttonCode: { launch: '' },
@@ -398,7 +405,7 @@ describe("extension", () => {
 
             expect(mockUtils.getRemoteEndpointSettings).toHaveBeenCalled()
             expect(mockUtils.getBrowserPath).toHaveBeenCalled();
-            expect(mockUtils.launchBrowser).toHaveBeenCalledWith(
+            expect(mockUtils.launchBrowserWithTimeout).toHaveBeenCalledWith(
                 expect.any(String) /** browserPath */,
                 expect.any(String) /** port */,
                 expectedUrl /** targetUrl */,
@@ -555,7 +562,7 @@ describe("extension", () => {
             const newExtension = await import("../src/extension");
 
             await newExtension.launch(createFakeExtensionContext());
-            expect(mockUtils.launchBrowser).toHaveBeenCalled();
+            expect(mockUtils.launchBrowserWithTimeout).toHaveBeenCalled();
         });
 
         it("reports the browser type", async () => {

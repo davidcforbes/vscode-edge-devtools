@@ -35,6 +35,20 @@ jobs:
         npm run build-and-lint
         npm run test
 
+    - name: Harness integration tests (logs)
+      run: |
+        npm run test:harness -- --suite=integration --log-dir=test-logs
+      env:
+        SKIP_EDGE_LAUNCH: "1"
+
+    - name: Upload test logs on failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-logs-linux
+        path: test-logs
+        if-no-files-found: ignore
+
     - name: Creating .vsix
       run: |
         npm run package

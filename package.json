@@ -204,6 +204,12 @@
         "transform": {
             "^.+\\.tsx?$": "ts-jest"
         },
+        "modulePathIgnorePatterns": [
+            "<rootDir>/out/"
+        ],
+        "testPathIgnorePatterns": [
+            "<rootDir>/test/harness/"
+        ],
         "testRegex": "/test/.+\\.test\\.tsx?$",
         "moduleFileExtensions": [
             "ts",
@@ -230,7 +236,7 @@
         "watch-wp": "webpack --watch",
         "lint": "eslint -c .eslintrc.mjs .",
         "test": "npm run lint && jest --config package.json --runInBand --env=jsdom",
-        "test:harness": "node out/test/harness/runner.js",
+        "test:harness": "node --experimental-specifier-resolution=node out/test/harness/runner.js",
         "test:harness:unit": "npm run test:harness -- --suite=unit",
         "test:harness:integration": "npm run test:harness -- --suite=integration",
         "test:harness:e2e": "npm run test:harness -- --e2e",

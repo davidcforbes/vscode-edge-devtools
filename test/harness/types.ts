@@ -12,6 +12,7 @@ export interface RunnerOptions {
     watch?: boolean;
     coverage?: boolean;
     e2e?: boolean;
+    logDir?: string;
     browser?: 'stable' | 'beta' | 'dev' | 'canary';
     parallel?: number;
 }

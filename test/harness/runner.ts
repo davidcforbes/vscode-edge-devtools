@@ -2,10 +2,15 @@
 // Licensed under the MIT License.
 
 import { fileURLToPath } from 'url';
+import * as fs from 'fs';
+import * as path from 'path';
 import { TestContext } from './context.js';
 import { TestReporter } from './reporter.js';
 import { loadTestSuites } from './loader.js';
 import { RunnerOptions, TestSuite, TestCase, TestResult } from './types.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /**
  * Main test runner that executes test suites
@@ -93,6 +98,66 @@ export class TestRunner {
     }
 }
 
+function setupConsoleCapture(options: RunnerOptions): void {
+    if (!options.logDir) {
+        return;
+    }
+
+    fs.mkdirSync(options.logDir, { recursive: true });
+    const outputPath = path.join(options.logDir, 'test-output.log');
+    const stream = fs.createWriteStream(outputPath, { flags: 'a' });
+
+    const wrap = (method: (...args: unknown[]) => void) => {
+        return (...args: unknown[]) => {
+            const line = args.map(arg => {
+                if (typeof arg === 'string') {
+                    return arg;
+                }
+                try {
+                    return JSON.stringify(arg);
+                } catch {
+                    return String(arg);
+                }
+            }).join(' ');
+            stream.write(redactSensitive(line) + '\n');
+            method(...args);
+        };
+    };
+
+    console.log = wrap(console.log.bind(console));
+    console.warn = wrap(console.warn.bind(console));
+    console.error = wrap(console.error.bind(console));
+}
+
+function redactSensitive(text: string): string {
+    return text
+        .replace(/ghp_[A-Za-z0-9]{20,}/g, '[REDACTED]')
+        .replace(/github_pat_[A-Za-z0-9_]{20,}/g, '[REDACTED]')
+        .replace(/(authorization:\s*bearer\s+)[A-Za-z0-9._\-]+/gi, '$1[REDACTED]')
+        .replace(/(token=)[A-Za-z0-9._\-]+/gi, '$1[REDACTED]')
+        .replace(/(password=)\S+/gi, '$1[REDACTED]');
+}
+
+function ensureNodeResolutionShims(): void {
+    const commonDir = path.resolve(__dirname, '../../src/common');
+    const modules = ['webviewEvents', 'messageValidation', 'urlValidation'];
+
+    for (const moduleName of modules) {
+        const shimPath = path.join(commonDir, moduleName);
+        const jsPath = `${shimPath}.js`;
+        if (!fs.existsSync(jsPath)) {
+            continue;
+        }
+        if (!fs.existsSync(shimPath)) {
+            try {
+                fs.copyFileSync(jsPath, shimPath);
+            } catch (error) {
+                console.warn(`Failed to create node resolution shim for ${moduleName}:`, error);
+            }
+        }
+    }
+}
+
 /**
  * Parse command-line arguments
  */
@@ -137,6 +202,10 @@ function parseArgs(args: string[]): RunnerOptions {
             options.parallel = parseInt(arg.split('=')[1], 10);
         } else if (arg === '--parallel') {
             options.parallel = parseInt(args[++i], 10);
+        } else if (arg.startsWith('--log-dir=')) {
+            options.logDir = arg.split('=')[1];
+        } else if (arg === '--log-dir') {
+            options.logDir = args[++i];
         } else if (arg === '--help' || arg === '-h') {
             printHelp();
             process.exit(0);
@@ -166,6 +235,7 @@ Options:
   --e2e                 Run only E2E tests
   --browser=<flavor>    Browser flavor: stable, beta, dev, canary
   --parallel=<n>        Run tests in parallel (number of workers)
+  --log-dir=<path>      Write test results to JSON in this directory
   --help, -h            Show this help message
 
 Examples:
@@ -174,15 +244,17 @@ Examples:
   npm run test:harness -- --suite=unit
   npm run test:harness -- --e2e --browser=canary
   npm run test:harness -- --parallel=4
+  npm run test:harness -- --log-dir=/tmp/edge-devtools-test-logs
 `);
 }
 
 // CLI entry point
-const __filename = fileURLToPath(import.meta.url);
 const isMainModule = process.argv[1] === __filename || process.argv[1].endsWith('runner.js');
 
 if (isMainModule) {
     const options = parseArgs(process.argv.slice(2));
+    setupConsoleCapture(options);
+    ensureNodeResolutionShims();
     const runner = new TestRunner(options);
     runner.run().catch((error) => {
         console.error('Unhandled error:', error);

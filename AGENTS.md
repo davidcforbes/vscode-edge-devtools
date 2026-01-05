@@ -12,6 +12,8 @@ bd close <id>         # Complete work
 bd sync               # Sync with git
 ```
 
+Testing strategy reference: `docs/TESTING_STRATEGY.md`.
+
 ## Landing the Plane (Session Completion)
 
 **When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.

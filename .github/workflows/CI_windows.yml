@@ -35,6 +35,30 @@ jobs:
         npm run build-and-lint
         npm run test
 
+    - name: Install VS Code for orchestration tests
+      run: |
+        choco install vscode -y
+
+    - name: Harness integration tests (logs)
+      run: |
+        npm run test:harness -- --suite=integration --log-dir=test-logs
+      env:
+        SKIP_EDGE_LAUNCH: "1"
+
+    - name: Orchestration smoke test (VS Code + Edge)
+      env:
+        VSCODE_BIN: C:\\Program Files\\Microsoft VS Code\\bin\\code.cmd
+      run: |
+        npm run test:harness -- --suite=e2e --log-dir=test-logs
+
+    - name: Upload test logs on failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-logs-windows
+        path: test-logs
+        if-no-files-found: ignore
+
     - name: Creating .vsix
       run: |
         npm run package

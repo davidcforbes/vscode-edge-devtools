@@ -43,6 +43,8 @@ npm run test:harness:integration  # Run integration tests only
 npm run test:harness:e2e       # Run E2E tests only
 ```
 
+Testing strategy and orchestration guidance: `docs/TESTING_STRATEGY.md`.
+
 Jest tests (unit tests for components):
 - `test/screencastPanel.test.ts` - ScreencastPanel unit tests
 - `test/panelSocket.test.ts` - PanelSocket unit tests
