@@ -86,7 +86,7 @@ export class ScreencastPanel {
         }, this);
 
         this.recordEnumeratedHistogram('DevTools.ScreencastToggle', 1);
-        
+
         // Initialize the webview HTML content
         this.update();
     }
