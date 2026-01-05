@@ -226,7 +226,7 @@ export function activate(context: vscode.ExtensionContext): void {
         console.warn('[Extension] Last panel closed, closing shared browser instance');
         if (sharedBrowserInstance) {
             const browserToClose = sharedBrowserInstance;
-            
+
             // Clean up any browserInstances map entries pointing to the shared browser
             // Do this before closing to avoid race with disconnected event
             for (const [url, browser] of browserInstances.entries()) {
@@ -235,7 +235,7 @@ export function activate(context: vscode.ExtensionContext): void {
                     console.warn(`[Extension] Removed shared browser map entry for ${url}`);
                 }
             }
-            
+
             browserToClose.close().catch(err => {
                 console.error('[Extension] Error closing shared browser:', err);
             });

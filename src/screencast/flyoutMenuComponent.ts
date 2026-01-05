@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 import {html, render} from 'lit-html';
-import {createRef, ref} from 'lit-html/directives/ref.js'
+import {createRef, ref} from 'lit-html/directives/ref.js';
 import {styleMap, StyleInfo} from 'lit-html/directives/style-map.js';
 
 export enum OffsetDirection {
@@ -67,14 +67,14 @@ export default class FlyoutMenuComponent {
             } else {
                 this.#menuItemSections[sectionIndex].selectedItem = value;
             }
-        }
-    }
+        };
+    };
 
     #onClick = () => {
         const thisComponent = this.#buttonRef.value;
         const boundingRect = thisComponent!.getBoundingClientRect();
 
-        let styles = {
+        const styles = {
             display: 'block',
             position: 'absolute',
         } as StyleInfo;
@@ -91,14 +91,14 @@ export default class FlyoutMenuComponent {
         }
 
         render(this.#menuTemplate(styles), document.body);
-        document.body.addEventListener('mousedown', this.#closeMenu)
+        document.body.addEventListener('mousedown', this.#closeMenu);
 
     };
 
     #closeMenu = () => {
         document.getElementById('popover')!.style.display = 'none';
         document.body.removeEventListener('mousedown', this.#closeMenu);
-    }
+    };
 
     #menuSectionTemplate(menuItemSection: MenuItemSection, menuItemSectionIndex: number) {
         const renderedMenuItems = menuItemSection.menuItems.map((item, i) => {
@@ -121,16 +121,16 @@ export default class FlyoutMenuComponent {
 
         return html`
             <ul>${renderedMenuItems}</ul>
-        `
+        `;
     }
 
     #menuTemplate(styles: StyleInfo) {
-        let partials = [];
+        const partials = [];
         for (let i = 0; i < this.#menuItemSections.length; i++) {
             const section = this.#menuItemSections[i];
             partials.push(this.#menuSectionTemplate(section, i));
             if (i !== this.#menuItemSections.length - 1) {
-                partials.push(html`<hr />`)
+                partials.push(html`<hr />`);
             }
         }
         return html`
@@ -144,7 +144,7 @@ export default class FlyoutMenuComponent {
         if (!this.#container) {
             return;
         }
-        render(this.template(), this.#container); 
+        render(this.template(), this.#container);
     }
 
     template() {
@@ -178,5 +178,5 @@ export default class FlyoutMenuComponent {
         if (flyoutMenuContainer) {
             new FlyoutMenuComponent(props, flyoutMenuContainer);
         }
-    } 
+    }
 }

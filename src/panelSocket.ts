@@ -72,7 +72,7 @@ function isCDPCommandAllowed(message: string): boolean {
 function isRuntimeEvaluateAllowed(command: CDPCommand): boolean {
     const params = command.params as { expression?: string } | undefined;
     const expression = params?.expression;
-    
+
     if (!expression || typeof expression !== 'string') {
         console.warn('[PanelSocket] Runtime.evaluate missing expression parameter');
         return false;

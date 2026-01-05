@@ -82,9 +82,9 @@ export function parseMessageFromChannel(
     // Validate message length to prevent DOS attacks
     const MAX_MESSAGE_LENGTH = 10 * 1024 * 1024; // 10MB
     if (typeof message !== 'string' || message.length > MAX_MESSAGE_LENGTH) {
-        console.warn('[webviewEvents] Invalid or oversized message', { 
-            type: typeof message, 
-            length: typeof message === 'string' ? message.length : 0 
+        console.warn('[webviewEvents] Invalid or oversized message', {
+            type: typeof message,
+            length: typeof message === 'string' ? message.length : 0
         });
         return false;
     }
@@ -97,7 +97,7 @@ export function parseMessageFromChannel(
     }
 
     const eventName = message.substring(0, separatorIndex);
-    
+
     // Validate event name against allowlist
     if (!webviewEventNames.includes(eventName as WebviewEvent)) {
         console.warn(`[webviewEvents] Unknown event type: ${eventName}`);

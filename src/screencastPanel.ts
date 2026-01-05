@@ -253,7 +253,7 @@ export class ScreencastPanel {
 
         try {
             const error = errorData as { context: string; error: string; rawMessage: string };
-            
+
             // Report to telemetry
             this.telemetryReporter.sendTelemetryErrorEvent('devtools/parseError', {
                 'context': error.context || 'unknown',

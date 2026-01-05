@@ -1,9 +1,9 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-import { encodeMessageForChannel, parseMessageFromChannel } from "../common/webviewEvents";
+import { encodeMessageForChannel, parseMessageFromChannel } from '../common/webviewEvents';
 
-declare const acquireVsCodeApi: () => {postMessage(message: unknown, args?: any|undefined): void};
+declare const acquireVsCodeApi: () => {postMessage(message: unknown, args?: any): void};
 export const vscode = acquireVsCodeApi();
 
 interface CdpMessage {

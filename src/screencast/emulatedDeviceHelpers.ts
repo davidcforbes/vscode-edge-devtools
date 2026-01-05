@@ -11,7 +11,7 @@ export function groupEmulatedDevicesByType(): Map<string, MenuItem[]> {
         const deviceEntry = {
             name: device.title,
             value: device.title
-        }
+        };
         const groupedDeviceList = groupedDevices.get(device.type);
         if (!groupedDeviceList) {
             groupedDevices.set(device.type, [deviceEntry]);
@@ -34,7 +34,7 @@ export function groupEmulatedDevicesByType(): Map<string, MenuItem[]> {
 }
 
 export function getEmulatedDeviceDetails(deviceName: string) {
-    return emulatedDevices.find((device) => {
+    return emulatedDevices.find(device => {
         return device.title === deviceName;
     });
 }

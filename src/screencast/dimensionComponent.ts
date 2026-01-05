@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 import {html, render} from 'lit-html';
-import {createRef, ref} from 'lit-html/directives/ref.js'
+import {createRef, ref} from 'lit-html/directives/ref.js';
 
 interface DimensionComponentProps {
     width: number;
@@ -68,7 +68,7 @@ export default class DimensionComponent {
         if (!this.container) {
             return;
         }
-        render(this.template(), this.container); 
+        render(this.template(), this.container);
     }
 
     #onKeyDown = (e: KeyboardEvent) => {
@@ -76,7 +76,7 @@ export default class DimensionComponent {
             return;
         }
         this.#onBlur(e);
-    }
+    };
 
     #onBlur = (e: Event) => {
         if (!e.target) {
@@ -98,7 +98,7 @@ export default class DimensionComponent {
 
         this.update();
         this.onUpdateDimensions(this.width, this.height);
-    }
+    };
 
     #onResize = () => {
         if (!this.screenCastView || !this.updateOnResize) {
@@ -110,7 +110,7 @@ export default class DimensionComponent {
 
         this.update();
         this.onUpdateDimensions(this.width, this.height);
-    }
+    };
 
     #onRotate = () => {
         const temp = this.width;
@@ -119,7 +119,7 @@ export default class DimensionComponent {
 
         this.update();
         this.onUpdateDimensions(this.width, this.height);
-    }
+    };
 
     #setDimensionState(width: number, height: number, updateOnResize: boolean, disableInputs: boolean) {
         this.width = width;
@@ -135,7 +135,7 @@ export default class DimensionComponent {
         if (dimensionContainer) {
             component = new DimensionComponent(props, dimensionContainer);
         }
-    } 
+    }
 
     static setDimensionState(width: number, height: number, updateOnResize: boolean, disableInputs: boolean) {
         component.#setDimensionState(width, height, updateOnResize, disableInputs);

@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 import { html, render } from 'lit-html';
-import { createRef, ref } from 'lit-html/directives/ref.js'
+import { createRef, ref } from 'lit-html/directives/ref.js';
 import { styleMap, StyleInfo } from 'lit-html/directives/style-map.js';
 
 interface InfobarProps {
@@ -21,7 +21,7 @@ export default class InfobarComponent {
     }
 
     #update(styles?: StyleInfo) {
-        let customStyles = styles ?? {
+        const customStyles = styles ?? {
             display: 'flex'
         };
 
@@ -41,7 +41,7 @@ export default class InfobarComponent {
     }
 
     #onClick = () => {
-        let styles = {
+        const styles = {
             display: 'none',
         } as StyleInfo;
 

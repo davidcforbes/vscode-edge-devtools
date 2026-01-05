@@ -241,11 +241,11 @@
     "dependencies": {
         "@vscode/codicons": "0.0.40",
         "@vscode/extension-telemetry": "0.9.4",
-        "bufferutil": "4.0.9",
+        "bufferutil": "~4.0.9",
         "lit-html": "^3.3.1",
-        "puppeteer-core": "24.23.0",
-        "utf-8-validate": "6.0.5",
-        "ws": "8.18.3"
+        "puppeteer-core": "~24.23.0",
+        "utf-8-validate": "~6.0.5",
+        "ws": "~8.18.3"
     },
     "devDependencies": {
         "@types/fs-extra": "11.0.4",
@@ -256,20 +256,20 @@
         "@typescript-eslint/eslint-plugin": "8.46.0",
         "@typescript-eslint/parser": "8.46.0",
         "@vscode/vsce": "^3.6.2",
-        "copy-webpack-plugin": "13.0.1",
-        "eslint": "9.37.0",
-        "eslint-plugin-import": "2.32.0",
-        "eslint-plugin-jsdoc": "60.8.3",
-        "eslint-plugin-prefer-arrow": "1.2.3",
-        "fs-extra": "11.3.2",
-        "jest": "30.2.0",
+        "copy-webpack-plugin": "^13.0.1",
+        "eslint": "^9.37.0",
+        "eslint-plugin-import": "^2.32.0",
+        "eslint-plugin-jsdoc": "^60.8.3",
+        "eslint-plugin-prefer-arrow": "^1.2.3",
+        "fs-extra": "^11.3.2",
+        "jest": "^30.2.0",
         "jest-environment-jsdom": "^30.2.0",
-        "ts-jest": "29.4.4",
-        "ts-loader": "9.5.4",
-        "typescript": "5.9.3",
-        "uglify-js": "3.19.3",
-        "unzipper": "0.12.3",
-        "webpack": "5.102.1",
-        "webpack-cli": "6.0.1"
+        "ts-jest": "^29.4.4",
+        "ts-loader": "^9.5.4",
+        "typescript": "~5.9.3",
+        "uglify-js": "^3.19.3",
+        "unzipper": "^0.12.3",
+        "webpack": "^5.102.1",
+        "webpack-cli": "^6.0.1"
     }
 }
