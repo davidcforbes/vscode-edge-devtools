@@ -194,20 +194,30 @@ export class ScreencastPanel {
     }
 
     private onSocketTelemetry(message: string) {
-        const telemetry: TelemetryData = JSON.parse(message) as TelemetryData;
-        if (telemetry.event !== 'screencast') {
-            return;
-        }
+        try {
+            const telemetry: TelemetryData = JSON.parse(message) as TelemetryData;
+            if (telemetry.event !== 'screencast') {
+                return;
+            }
 
-        this.telemetryReporter.sendTelemetryEvent(
-            `devtools/${telemetry.name}/${telemetry.data.event}`, {
-                'value': telemetry.data.value as string,
-            });
+            this.telemetryReporter.sendTelemetryEvent(
+                `devtools/${telemetry.name}/${telemetry.data.event}`, {
+                    'value': telemetry.data.value as string,
+                });
+        } catch (error) {
+            console.error('[ScreencastPanel] Failed to parse telemetry message:', error);
+            // Ignore malformed telemetry - don't crash extension
+        }
     }
 
     private onSaveToClipboard(message: string): void {
-        const clipboardMessage = JSON.parse(message) as {data: {message: string}};
-        void vscode.env.clipboard.writeText(clipboardMessage.data.message);
+        try {
+            const clipboardMessage = JSON.parse(message) as {data: {message: string}};
+            void vscode.env.clipboard.writeText(clipboardMessage.data.message);
+        } catch (error) {
+            console.error('[ScreencastPanel] Failed to parse clipboard message:', error);
+            // Ignore malformed message - don't crash extension
+        }
     }
 
     private onGetClipboardText(): void {

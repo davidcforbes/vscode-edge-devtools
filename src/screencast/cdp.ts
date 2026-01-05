@@ -29,36 +29,51 @@ export class ScreencastCDPConnection {
         window.addEventListener('message', e => {
             parseMessageFromChannel(e.data, (eventName, args) => {
                 if (eventName === 'websocket') {
-                    const { message } = JSON.parse(args) as { message: string };
-                    if (message) {
-                        // Handle event responses
-                        const messageObj = JSON.parse(message) as CdpMessage;
-                        for (const callback of this.eventCallbackMap.get(messageObj.method) || []) {
-                            callback(messageObj.params);
+                    try {
+                        const { message } = JSON.parse(args) as { message: string };
+                        if (message) {
+                            // Handle event responses
+                            const messageObj = JSON.parse(message) as CdpMessage;
+                            for (const callback of this.eventCallbackMap.get(messageObj.method) || []) {
+                                callback(messageObj.params);
+                            }
+                            // Handle method responses
+                            const methodCallback = this.methodCallbackMap.get(messageObj.id);
+                            if (methodCallback) {
+                                methodCallback(messageObj.result);
+                                this.methodCallbackMap.delete(messageObj.id);
+                            }
+                            if (this.clipboardRequests.has(messageObj.id) && this.saveToClipboard) {
+                                this.saveToClipboard((messageObj as {result: {result: {value: string}}}).result.result.value);
+                                this.clipboardRequests.delete(messageObj.id);
+                            }
                         }
-                        // Handle method responses
-                        const methodCallback = this.methodCallbackMap.get(messageObj.id);
-                        if (methodCallback) {
-                            methodCallback(messageObj.result);
-                            this.methodCallbackMap.delete(messageObj.id);
-                        }
-                        if (this.clipboardRequests.has(messageObj.id) && this.saveToClipboard) {
-                            this.saveToClipboard((messageObj as {result: {result: {value: string}}}).result.result.value);
-                            this.clipboardRequests.delete(messageObj.id);
-                        }
+                    } catch (error) {
+                        console.error('[ScreencastCDP] Failed to parse websocket message:', error);
+                        // Ignore malformed message - don't crash webview
                     }
                     return true;
                 }
                 if (eventName === 'toggleInspect') {
-                    const { enabled } = JSON.parse(args) as { enabled: string };
-                    for (const callback of this.eventCallbackMap.get('DevTools.toggleInspect') || []) {
-                        callback(enabled);
+                    try {
+                        const { enabled } = JSON.parse(args) as { enabled: string };
+                        for (const callback of this.eventCallbackMap.get('DevTools.toggleInspect') || []) {
+                            callback(enabled);
+                        }
+                    } catch (error) {
+                        console.error('[ScreencastCDP] Failed to parse toggleInspect message:', error);
+                        // Ignore malformed message
                     }
                 }
                 if (eventName === 'readClipboard') {
-                    const { clipboardText } = JSON.parse(args) as { clipboardText: string };
-                    for (const callback of this.eventCallbackMap.get('readClipboard') || []) {
-                        callback(clipboardText);
+                    try {
+                        const { clipboardText } = JSON.parse(args) as { clipboardText: string };
+                        for (const callback of this.eventCallbackMap.get('readClipboard') || []) {
+                            callback(clipboardText);
+                        }
+                    } catch (error) {
+                        console.error('[ScreencastCDP] Failed to parse readClipboard message:', error);
+                        // Ignore malformed message
                     }
                 }
                 return false;

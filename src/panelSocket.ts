@@ -66,17 +66,23 @@ export class PanelSocket extends EventEmitter {
                 this.connectToTarget();
             }
 
-            const { message } = JSON.parse(args) as {message: string};
-            if (message && message[0] === '{') {
-                if (!this.isConnected) {
-                    // DevTools are sending a message before the real websocket has finished opening so cache it
-                    this.messages.push(message);
-                } else {
-                    // Websocket ready so send the message directly
-                    if (this.socket) {
-                        this.socket.send(message);
+            try {
+                const { message } = JSON.parse(args) as {message: string};
+                if (message && message[0] === '{') {
+                    if (!this.isConnected) {
+                        // DevTools are sending a message before the real websocket has finished opening so cache it
+                        this.messages.push(message);
+                    } else {
+                        // Websocket ready so send the message directly
+                        if (this.socket) {
+                            this.socket.send(message);
+                        }
                     }
                 }
+            } catch (error) {
+                console.error('[PanelSocket] Failed to parse webview websocket message:', error);
+                // Ignore malformed message - don't crash extension
+                return false;
             }
         }
 
