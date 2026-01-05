@@ -123,7 +123,10 @@ export async function retryAsync<T>(
     }
 
     // Timeout exceeded, throw last error
-    throw lastError || new Error('retryAsync timed out');
+    if (lastError instanceof Error) {
+        throw lastError;
+    }
+    throw new Error('retryAsync timed out');
 }
 
 /**
