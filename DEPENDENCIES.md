@@ -1,20 +1,44 @@
 # Dependency Version Strategy
 
-## Current State
+## Summary
 
-The project currently pins most dependencies to exact versions:
-- **Production dependencies**: 6 of 7 are pinned to exact versions (only `lit-html` uses caret `^`)
-- **Dev dependencies**: Most are pinned, with exceptions like `@vscode/vsce`, `jest-environment-jsdom`
+This document defines the dependency versioning strategy for vscode-edge-devtools. The project uses a balanced approach:
+- **Tilde (`~`)** for security-critical packages to allow patch updates only
+- **Exact versions** for VS Code packages that must track specific API versions
+- **Caret (`^`)** for build tools, testing frameworks, and type definitions to allow minor updates
 
-## Security Vulnerabilities Found
+**Status**: As of 2026-01-04, all production dependencies follow the documented strategy. Dev dependencies are mostly compliant, with some @types/* packages and linting plugins still pinned that could benefit from caret ranges.
 
-As of 2026-01-04, `npm audit` identified 4 vulnerabilities in transitive dependencies:
-1. **glob** (HIGH) - Command injection via CLI (affects jest, vsce)
-2. **js-yaml** (MODERATE) - Prototype pollution (affects eslint)
-3. **jws** (HIGH) - HMAC signature verification issue
-4. **qs** (HIGH) - DoS via memory exhaustion
+## Current State (as of v3.0.0)
 
-All have fixes available via dependency updates.
+The project follows a mixed versioning strategy:
+
+**Production dependencies**:
+- Security-critical packages (ws, puppeteer-core, bufferutil, utf-8-validate): tilde (`~`) ✓
+- VS Code packages (@vscode/codicons, @vscode/extension-telemetry): exact versions ✓
+- Stable libraries (lit-html): caret (`^`) ✓
+
+**Dev dependencies**:
+- Build tools (webpack, eslint): caret (`^`) ✓
+- TypeScript: tilde (`~5.9.3`) ✓
+- Testing frameworks (jest, ts-jest): caret (`^`) ✓
+- Type definitions (@types/*): **mostly pinned** ⚠️
+  - @types/vscode: pinned to 1.104.0 (matching engines.vscode) ✓
+  - Other @types packages: pinned but should use caret (`^`)
+- Linting plugins (@typescript-eslint/*): **pinned** ⚠️
+  - Should use caret (`^`) while keeping parser and plugin synchronized
+
+## Security Status
+
+As of 2026-01-04, `npm audit` reports **0 vulnerabilities** ✓
+
+Previous vulnerabilities (fixed):
+- **glob** (HIGH) - Command injection via CLI
+- **js-yaml** (MODERATE) - Prototype pollution
+- **jws** (HIGH) - HMAC signature verification issue
+- **qs** (HIGH) - DoS via memory exhaustion
+
+Regular `npm audit` checks recommended to catch new vulnerabilities early.
 
 ## Recommended Strategy
 
@@ -36,17 +60,34 @@ All have fixes available via dependency updates.
 
 ### Dev Dependencies
 
-**For build tools** (webpack, typescript, eslint):
+**For build tools** (webpack, eslint):
 - **Use caret (`^`)** to stay current with ecosystem improvements
-- Exception: TypeScript should use tilde (`~`) to avoid breaking changes between minor versions
+- Example: `"webpack": "^5.102.1"` (already in use)
+
+**For TypeScript**:
+- **Use tilde (`~`)** to avoid breaking changes between minor versions
+- Example: `"typescript": "~5.9.3"` (already in use)
+- Rationale: TypeScript can introduce breaking changes in minor versions
 
 **For testing frameworks** (jest, ts-jest):
 - **Use caret (`^`)** to get bug fixes and improvements
-- Already partially implemented (jest-environment-jsdom)
+- Example: `"jest": "^30.2.0"` (already in use)
 
-**For VS Code types** (@types/vscode):
-- **Keep exact version** matching `engines.vscode` in package.json
-- Currently: both are `1.104.0` ✓
+**For TypeScript type definitions** (@types/*):
+- **@types/vscode**: Keep exact version matching `engines.vscode` in package.json
+  - Currently: both are `1.104.0` ✓
+  - Rationale: Must match VS Code API version exactly
+- **Other @types packages**: Use caret (`^`) to track library versions
+  - Recommended: `"@types/node": "^24.7.0"` (currently pinned at 24.7.0)
+  - Recommended: `"@types/jest": "^30.0.0"` (currently pinned at 30.0.0)
+  - Recommended: `"@types/ws": "^8.18.1"` (currently pinned at 8.18.1)
+  - Rationale: Type definitions should evolve with their corresponding libraries
+  - Exception: Pin when specific type version is needed for compatibility
+
+**For linting plugins** (@typescript-eslint/*):
+- **Use caret (`^`)** but keep parser and plugin at the same version
+- Example: Both at `"^8.46.0"` (currently pinned at 8.46.0)
+- Rationale: Parser and plugin must be compatible; caret allows updates
 
 ## Update Cadence
 
@@ -60,27 +101,53 @@ All have fixes available via dependency updates.
 
 ## Implementation Steps
 
-1. **Update package.json version strategies**:
+### Phase 1: Align with documented strategy (optional improvement)
+
+1. **Update @types/* packages to use caret ranges** (except @types/vscode):
    ```json
-   "dependencies": {
-     "@vscode/codicons": "0.0.40",           // keep exact
-     "@vscode/extension-telemetry": "0.9.4", // keep exact
-     "bufferutil": "~4.0.9",                 // tilde for patches
-     "lit-html": "^3.3.1",                   // keep caret
-     "puppeteer-core": "~24.23.0",           // tilde for patches
-     "utf-8-validate": "~6.0.5",             // tilde for patches
-     "ws": "~8.18.3"                         // tilde for patches
+   "devDependencies": {
+     "@types/fs-extra": "^11.0.4",        // change from 11.0.4
+     "@types/jest": "^30.0.0",            // change from 30.0.0
+     "@types/node": "^24.7.0",            // change from 24.7.0
+     "@types/vscode": "1.104.0",          // keep exact (matches engines.vscode)
+     "@types/ws": "^8.18.1"               // change from 8.18.1
    }
    ```
 
-2. **Run `npm audit fix`** to resolve current vulnerabilities
+2. **Update linting plugins to use caret ranges**:
+   ```json
+   "devDependencies": {
+     "@typescript-eslint/eslint-plugin": "^8.46.0",  // change from 8.46.0
+     "@typescript-eslint/parser": "^8.46.0"          // change from 8.46.0
+   }
+   ```
 
-3. **Test extension** after dependency updates:
+3. **Run `npm install`** to update package-lock.json with new ranges
+
+4. **Test extension** after dependency updates:
    - Run `npm test && npm run test:harness`
    - Manual testing in Extension Development Host
    - Verify browser launch, screencast, and all commands
 
-4. **Document in CHANGELOG** when significant dependencies are updated
+### Phase 2: Regular maintenance
+
+1. **Run `npm audit`** monthly or when dependencies are updated
+   - Apply security fixes immediately when vulnerabilities are found
+
+2. **Run `npm outdated`** quarterly to identify available updates
+   - Review release notes for major/minor updates
+   - Test thoroughly after updates
+
+3. **Document in CHANGELOG** when significant dependencies are updated
+
+### Verification
+
+Current dependency ranges are documented above. Verify compliance:
+```bash
+npm audit                # Should report 0 vulnerabilities
+npm outdated             # Review available updates
+npm test && npm run test:harness  # All tests should pass
+```
 
 ## Rationale for Strategy
 
